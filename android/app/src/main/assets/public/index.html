@@ -1,0 +1,1811 @@
+<title>Comanda Cevichería</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B5D52">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Comanda">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#EFF6F3;
+  --surface:#FFFFFF;
+  --surface-2:#E4EFE9;
+  --border:#D3E2DA;
+  --text:#12211D;
+  --text-muted:#5C6E66;
+  --accent:#E0602A;
+  --accent-ink:#FFFFFF;
+  --teal:#0B5D52;
+  --teal-ink:#FFFFFF;
+  --success:#1F9D6B;
+  --success-bg:#E3F5EC;
+  --warning:#C9891C;
+  --warning-bg:#FBF0DC;
+  --danger:#C4392C;
+  --danger-bg:#FBE6E2;
+  --shadow: 0 1px 2px rgba(18,33,29,.06), 0 6px 18px -8px rgba(18,33,29,.18);
+  --radius-sm:10px;
+  --radius-md:16px;
+  --radius-lg:22px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1613;
+    --surface:#16211D;
+    --surface-2:#1C2924;
+    --border:#2A3A33;
+    --text:#ECF3EF;
+    --text-muted:#9BB2A6;
+    --accent:#FF8355;
+    --accent-ink:#1A1006;
+    --teal:#3FB6A3;
+    --teal-ink:#08211C;
+    --success:#3FC088;
+    --success-bg:#123024;
+    --warning:#E3AE4E;
+    --warning-bg:#332608;
+    --danger:#F0796A;
+    --danger-bg:#331413;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 24px -10px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1613;
+  --surface:#16211D;
+  --surface-2:#1C2924;
+  --border:#2A3A33;
+  --text:#ECF3EF;
+  --text-muted:#9BB2A6;
+  --accent:#FF8355;
+  --accent-ink:#1A1006;
+  --teal:#3FB6A3;
+  --teal-ink:#08211C;
+  --success:#3FC088;
+  --success-bg:#123024;
+  --warning:#E3AE4E;
+  --warning-bg:#332608;
+  --danger:#F0796A;
+  --danger-bg:#331413;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 24px -10px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Manrope',system-ui,-apple-system,sans-serif;
+  -webkit-tap-highlight-color:transparent;
+  font-variant-numeric:tabular-nums;
+}
+h1,h2,h3,.font-display{font-family:'Sora',system-ui,sans-serif;text-wrap:balance;}
+button{font-family:inherit;}
+input,textarea,select{font-family:inherit;font-size:16px;}
+#app{max-width:640px;margin:0 auto;min-height:100vh;padding-bottom:110px;position:relative;}
+.hidden{display:none!important;}
+
+/* ---------- App bar ---------- */
+.appbar{
+  position:sticky;top:0;z-index:20;
+  background:var(--teal);color:var(--teal-ink);
+  padding:14px 16px;
+  display:flex;align-items:center;gap:10px;
+  box-shadow:var(--shadow);
+}
+.appbar .titles{flex:1;min-width:0;}
+.appbar h1{margin:0;font-size:19px;font-weight:700;line-height:1.2;}
+.appbar .sub{font-size:12.5px;opacity:.78;margin-top:1px;}
+.iconbtn{
+  border:none;background:rgba(255,255,255,.14);color:inherit;
+  width:38px;height:38px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;cursor:pointer;flex-shrink:0;
+}
+.iconbtn:active{background:rgba(255,255,255,.26);}
+.pillbtn{
+  border:none;background:rgba(255,255,255,.14);color:inherit;
+  padding:0 14px;height:36px;border-radius:999px;font-weight:600;font-size:13.5px;
+  display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;white-space:nowrap;
+}
+.pillbtn.on{background:var(--accent);color:var(--accent-ink);}
+.appbar-actions{display:flex;gap:8px;flex-shrink:0;}
+
+/* ---------- Layout helpers ---------- */
+.page-body{padding:14px 16px 20px;}
+.section-title{font-family:'Sora',sans-serif;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);margin:18px 2px 10px;}
+.section-title:first-child{margin-top:2px;}
+
+/* ---------- Chips row (ambientes) ---------- */
+.chiprow{display:flex;gap:8px;overflow-x:auto;padding:14px 16px 10px;scrollbar-width:none;}
+.chiprow::-webkit-scrollbar{display:none;}
+.chip{
+  flex-shrink:0;border:1.5px solid var(--border);background:var(--surface);color:var(--text);
+  padding:0 16px;height:40px;border-radius:999px;font-weight:700;font-size:14.5px;
+  display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap;
+}
+.chip.active{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);}
+.chip.dashed{border-style:dashed;color:var(--text-muted);font-weight:600;}
+.chip .mini{width:22px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.08);font-size:12px;cursor:pointer;}
+.chip.active .mini{background:rgba(255,255,255,.22);}
+
+/* ---------- Grids ---------- */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+@media (max-width:420px){.grid{grid-template-columns:repeat(2,1fr);}}
+.grid.cats{grid-template-columns:repeat(2,1fr);}
+
+.tile{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:14px 10px;cursor:pointer;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:96px;position:relative;
+}
+.tile .num{font-family:'Sora',sans-serif;font-size:22px;font-weight:800;}
+.tile .status-dot{width:9px;height:9px;border-radius:999px;position:absolute;top:12px;right:12px;}
+.tile .status-label{font-size:11.5px;font-weight:700;color:var(--text-muted);}
+.tile .total{font-size:13px;font-weight:700;margin-top:auto;}
+.tile.libre{}
+.tile.abierto{border-color:var(--accent);}
+.tile.cerrado{border-color:var(--warning);}
+.tile.atendida{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal), var(--shadow);}
+.tile.atendida .status-label{color:var(--teal);}
+.tile.dashed{border-style:dashed;align-items:center;justify-content:center;color:var(--text-muted);font-weight:700;box-shadow:none;background:transparent;}
+.tile .editrow{display:flex;gap:6px;margin-top:auto;position:absolute;bottom:10px;right:10px;}
+.tile .editbtn{width:26px;height:26px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;}
+
+.catcard{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:14px;cursor:pointer;box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:12px;
+}
+.catcard .badge{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-family:'Sora',sans-serif;font-size:14px;flex-shrink:0;}
+.catcard .name{font-weight:700;font-size:14.5px;line-height:1.25;}
+
+/* ---------- Empty state ---------- */
+.empty{
+  border:1.5px dashed var(--border);border-radius:var(--radius-lg);
+  padding:28px 20px;text-align:center;color:var(--text-muted);
+}
+.empty .icon{font-size:30px;margin-bottom:6px;}
+.empty h3{margin:4px 0 4px;color:var(--text);font-size:16px;}
+.empty p{margin:0 0 14px;font-size:13.5px;line-height:1.5;}
+
+/* ---------- Buttons ---------- */
+.btn{
+  border:none;border-radius:var(--radius-sm);font-weight:700;font-size:14.5px;
+  padding:0 18px;height:48px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn.primary{background:var(--accent);color:var(--accent-ink);}
+.btn.secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border);}
+.btn.teal{background:var(--teal);color:var(--teal-ink);}
+.btn.danger{background:var(--danger-bg);color:var(--danger);}
+.btn.ghost{background:transparent;color:var(--text-muted);height:40px;padding:0 8px;}
+.btn.block{width:100%;}
+.btn.sm{height:38px;font-size:13.5px;padding:0 14px;}
+.btn:disabled{opacity:.5;cursor:default;}
+
+/* ---------- Mesa screen ---------- */
+.status-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 10px 3px 8px;border-radius:999px;}
+.status-pill.libre{background:var(--success-bg);color:var(--success);}
+.status-pill.abierto{background:#FCE7DC;color:var(--accent);}
+.status-pill.cerrado{background:var(--warning-bg);color:var(--warning);}
+.status-pill.atendida{background:var(--success-bg);color:var(--teal);}
+.status-pill .dot{width:7px;height:7px;border-radius:999px;background:currentColor;}
+
+.itemcard{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow);
+}
+.itemcard .row1{display:flex;justify-content:space-between;gap:10px;}
+.itemcard .name{font-weight:700;font-size:14.5px;}
+.itemcard .price{font-weight:700;font-size:14.5px;white-space:nowrap;}
+.itemcard .detalle{font-size:12.5px;color:var(--text-muted);margin-top:4px;line-height:1.4;}
+.itemcard .row2{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
+.qtystepper{display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:999px;overflow:hidden;}
+.qtystepper button{width:34px;height:34px;border:none;background:var(--surface-2);font-size:16px;font-weight:700;cursor:pointer;color:var(--text);}
+.qtystepper .n{width:30px;text-align:center;font-weight:700;font-size:14.5px;}
+.itemcard .iconbtn.small{width:34px;height:34px;background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border);}
+.itemcard .iconbtn.small:active{color:var(--danger);}
+.itemcard.served{border-color:var(--success);}
+.itemcard.served .name{color:var(--text-muted);text-decoration:line-through;text-decoration-color:var(--border);}
+.servedpill{border:none;background:var(--warning-bg);color:var(--warning);font-size:11.5px;font-weight:800;padding:6px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;text-transform:uppercase;letter-spacing:.02em;display:inline-flex;align-items:center;gap:5px;}
+.servedpill.done{background:var(--success-bg);color:var(--success);}
+.servedcount{font-size:11px;font-weight:700;color:var(--text-muted);margin-top:2px;}
+.servedcount.complete{color:var(--success);}
+.edit-link{background:none;border:none;color:var(--teal);font-weight:700;font-size:12.5px;cursor:pointer;padding:0;}
+
+.totalbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:15;
+  background:var(--surface);border-top:1px solid var(--border);
+  padding:10px 16px calc(12px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 22px -12px rgba(18,33,29,.28);
+}
+.totalbar-inner{max-width:640px;margin:0 auto;}
+.totalbar .toprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.totalbar .tot-label{font-size:12px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+.totalbar .tot-value{font-family:'Sora',sans-serif;font-size:22px;font-weight:800;}
+.totalbar .btnrow{display:flex;gap:8px;}
+.totalbar .btnrow .btn{flex:1;}
+
+/* ---------- Modal / bottom sheet ---------- */
+.overlay{position:fixed;inset:0;background:rgba(10,18,15,.5);z-index:40;display:flex;align-items:flex-end;justify-content:center;}
+.overlay.center{align-items:center;padding:20px;}
+.sheet{
+  background:var(--bg);width:100%;max-width:640px;max-height:88vh;overflow-y:auto;
+  border-radius:22px 22px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.25);
+  animation:sheetup .18s ease-out;
+}
+@keyframes sheetup{from{transform:translateY(16px);opacity:.4;}to{transform:translateY(0);opacity:1;}}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:999px;margin:10px auto 0;}
+.sheet-header{padding:10px 18px 4px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.sheet-header h2{margin:0;font-size:18px;}
+.sheet-header .desc{font-size:12.5px;color:var(--text-muted);margin-top:3px;line-height:1.4;}
+.sheet-body{padding:6px 18px 18px;}
+.sheet-footer{position:sticky;bottom:0;background:var(--bg);padding:12px 18px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--border);display:flex;gap:10px;}
+.sheet-footer .btn{flex:1;}
+
+.dialog{background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:360px;padding:20px;box-shadow:var(--shadow);}
+.dialog h3{margin:0 0 8px;font-size:16.5px;}
+.dialog p{margin:0 0 18px;font-size:13.5px;color:var(--text-muted);line-height:1.5;}
+.dialog .btnrow{display:flex;gap:10px;}
+.dialog .btnrow .btn{flex:1;}
+
+/* ---------- Form fields ---------- */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em;}
+.field input[type=text],.field input[type=number],.field textarea,.field select{
+  width:100%;border:1.5px solid var(--border);background:var(--surface);color:var(--text);
+  border-radius:12px;padding:12px 13px;font-size:15px;
+}
+.field textarea{min-height:64px;resize:vertical;}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;}
+.checkrow{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.checkrow input{width:20px;height:20px;}
+.checkrow label{font-size:14px;font-weight:600;}
+
+.chipselect{display:flex;flex-wrap:wrap;gap:8px;}
+.optchip{
+  border:1.5px solid var(--border);background:var(--surface);color:var(--text);
+  padding:9px 14px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;
+}
+.optchip.sel{background:var(--teal);border-color:var(--teal);color:var(--teal-ink);}
+.optchip.obs.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+
+.pref-group{margin-bottom:16px;}
+.pref-group .glabel{font-weight:700;font-size:13.5px;margin-bottom:8px;}
+
+.prefrow{border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--surface);}
+.prefrow .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.prefrow .top span{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;}
+.linkbtn{background:none;border:none;color:var(--teal);font-weight:700;font-size:13.5px;cursor:pointer;padding:6px 0;}
+.linkbtn.danger{color:var(--danger);}
+
+.stepper-lg{display:flex;align-items:center;justify-content:center;gap:18px;padding:6px 0 4px;}
+.stepper-lg button{width:44px;height:44px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);font-size:20px;font-weight:700;cursor:pointer;}
+.stepper-lg .n{font-family:'Sora',sans-serif;font-size:26px;font-weight:800;min-width:44px;text-align:center;}
+
+/* ---------- Carta admin ---------- */
+.catsection{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);}
+.catsection .chead{padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+.catsection .chead .count{margin-left:auto;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface-2);padding:2px 9px;border-radius:999px;}
+.catsection .cbody{padding:0 14px 14px;}
+.prodrow{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--border);}
+.prodrow .info{flex:1;min-width:0;}
+.prodrow .pname{font-weight:700;font-size:14px;}
+.prodrow .pdesc{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.prodrow .pprice{font-size:12.5px;color:var(--text-muted);margin-top:3px;font-weight:600;}
+.prodrow .actions{display:flex;gap:6px;flex-shrink:0;align-self:flex-start;}
+
+/* ---------- Product list (ordering) ---------- */
+.prodcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow);}
+.prodcard .name{font-weight:700;font-size:15px;}
+.prodcard .desc{font-size:12.5px;color:var(--text-muted);margin-top:4px;line-height:1.45;}
+.prodcard .prices{display:flex;gap:14px;margin-top:9px;}
+.prodcard .price{font-size:13.5px;font-weight:700;color:var(--teal);}
+.prodcard .price .lbl{font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;display:block;}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:60;box-shadow:var(--shadow);max-width:88vw;text-align:center;}
+
+.loadingnote{font-size:12px;color:var(--text-muted);padding:0 16px 8px;}
+</style>
+
+<div id="app"></div>
+<div id="modal-layer"></div>
+<div id="toast-layer"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================== DATA ============================== */
+
+var CATEGORIAS = [
+  {id:"ceviches", n:"Ceviches"},
+  {id:"ceviches-especiales", n:"Ceviches Especiales"},
+  {id:"nuevos-platos", n:"Nuevos Platos"},
+  {id:"ceviches-mariscos", n:"Ceviches de Mariscos"},
+  {id:"chicharrones", n:"Chicharrones"},
+  {id:"chicharrones-especiales", n:"Chicharrones Especiales"},
+  {id:"sudados", n:"Sudados"},
+  {id:"arroces", n:"Arroces"},
+  {id:"chaufas", n:"Chaufas"},
+  {id:"picantes", n:"Picantes"},
+  {id:"chupes", n:"Chupes"},
+  {id:"jaleas", n:"Jaleas"},
+  {id:"frituras", n:"Frituras"},
+  {id:"apanados", n:"Apanados"},
+  {id:"parrillas", n:"Parrillas"},
+  {id:"chilcano", n:"Chilcano"},
+  {id:"platos-especiales", n:"Platos Especiales"},
+  {id:"cerveza", n:"Cerveza"},
+  {id:"bebidas", n:"Bebidas"},
+  {id:"bebidas-naturales", n:"Bebidas Naturales"}
+];
+var CAT_BY_ID = {};
+CATEGORIAS.forEach(function(c,i){ c.orden=i; CAT_BY_ID[c.id]=c; });
+
+var CAT_COLORS = ["#0B5D52","#E0602A","#2F6FB0","#C08A28","#7B5CC0","#1F9D6B","#B0503F","#3E8FA0"];
+function catColor(catId){
+  var idx = CATEGORIAS.findIndex(function(c){return c.id===catId;});
+  if(idx<0) idx=0;
+  return CAT_COLORS[idx % CAT_COLORS.length];
+}
+function catMono(nombre){
+  var words = nombre.split(" ");
+  if(words.length>1) return (words[0][0]+words[1][0]).toUpperCase();
+  return nombre.slice(0,2).toUpperCase();
+}
+
+var OBS_GENERICAS = ["Sin cebolla","Poco picante","Bien picante","Sin camote","Más cancha","Extra limón","Para llevar"];
+
+/* Offline build: embedded menu catalog for first-run seeding. */
+var SEED_PRODUCTOS = [{"id": "prod-ceviche-simple-ceviches", "categoriaId": "ceviches", "nombre": "Ceviche Simple", "descripcion": "Pescado", "precioPersonal": 32, "precioFuente": 74, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 0}, {"id": "prod-ceviche-bandera-ceviches", "categoriaId": "ceviches", "nombre": "Ceviche Bandera", "descripcion": "Pescado y crema de ajíes", "precioPersonal": 32, "precioFuente": 74, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 1}, {"id": "prod-ceviche-clasico-ceviches", "categoriaId": "ceviches", "nombre": "Ceviche Clásico", "descripcion": "Pescado y conchas negras", "precioPersonal": 42, "precioFuente": 94, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 2}, {"id": "prod-ceviche-mixto-ceviches", "categoriaId": "ceviches", "nombre": "Ceviche Mixto", "descripcion": "Pescado y mariscos", "precioPersonal": 37, "precioFuente": 84, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 3}, {"id": "prod-ceviche-de-conchas-negras-ceviches", "categoriaId": "ceviches", "nombre": "Ceviche de Conchas Negras", "descripcion": "Conchas negras", "precioPersonal": 40, "precioFuente": 79, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 4}, {"id": "prod-ceviche-de-punta-a-punta-ceviches", "categoriaId": "ceviches", "nombre": "Ceviche de Punta a Punta", "descripcion": "Pescado, langostino y conchas negras", "precioPersonal": 44, "precioFuente": 98, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 5}, {"id": "prod-ceviche-en-crema-de-rocoto-ceviches", "categoriaId": "ceviches", "nombre": "Ceviche en Crema de Rocoto", "descripcion": "Pescado en crema de rocoto", "precioPersonal": 33, "precioFuente": 76, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 6}, {"id": "prod-leche-de-pantera-ceviches", "categoriaId": "ceviches", "nombre": "Leche de Pantera", "descripcion": "Pescado y conchas", "precioPersonal": 30, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 7}, {"id": "prod-leche-de-tigre-ceviches", "categoriaId": "ceviches", "nombre": "Leche de Tigre", "descripcion": "Pescado", "precioPersonal": 26, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 8}, {"id": "prod-ceviche-especial-clasico-ceviches-especiales", "categoriaId": "ceviches-especiales", "nombre": "Ceviche Especial Clásico", "descripcion": "Corvina o robalo. Pescado y conchas negras", "precioPersonal": 54, "precioFuente": 112, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Corvina", "Róbalo"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 0}, {"id": "prod-ceviche-especial-mixto-ceviches-especiales", "categoriaId": "ceviches-especiales", "nombre": "Ceviche Especial Mixto", "descripcion": "Corvina o robalo. Pescado y mariscos", "precioPersonal": 52, "precioFuente": 109, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Corvina", "Róbalo"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 1}, {"id": "prod-ceviche-especial-simple-ceviches-especiales", "categoriaId": "ceviches-especiales", "nombre": "Ceviche Especial Simple", "descripcion": "Corvina o robalo. Pescado", "precioPersonal": 47, "precioFuente": 99, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Corvina", "Róbalo"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 2}, {"id": "prod-duo-marino-nuevos-platos", "categoriaId": "nuevos-platos", "nombre": "Dúo Marino", "descripcion": "Ceviche y arroz con mariscos", "precioPersonal": 42, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}, {"id": "pref-aparte", "nombre": "Servir aparte", "opciones": ["Ceviche aparte", "Arroz aparte"], "tipo": "multi"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 0}, {"id": "prod-fusion-marina-mixta-nuevos-platos", "categoriaId": "nuevos-platos", "nombre": "Fusión Marina Mixta", "descripcion": "Chicharrón mixto y ceviche mixto", "precioPersonal": 52, "precioFuente": 114, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}, {"id": "pref-aparte", "nombre": "Servir aparte", "opciones": ["Ceviche aparte", "Chicharrón aparte"], "tipo": "multi"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 1}, {"id": "prod-fusion-marina-simple-nuevos-platos", "categoriaId": "nuevos-platos", "nombre": "Fusión Marina Simple", "descripcion": "Chicharrón simple y ceviche simple", "precioPersonal": 42, "precioFuente": 94, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}, {"id": "pref-aparte", "nombre": "Servir aparte", "opciones": ["Ceviche aparte", "Chicharrón aparte"], "tipo": "multi"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 2}, {"id": "prod-trio-marino-nuevos-platos", "categoriaId": "nuevos-platos", "nombre": "Trío Marino", "descripcion": "Ceviche simple + chicharrón simple + arroz con mariscos. Solo para llevar.", "precioPersonal": 48, "precioFuente": 124, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}, {"id": "pref-aparte", "nombre": "Servir aparte", "opciones": ["Ceviche aparte", "Chicharrón aparte", "Arroz aparte"], "tipo": "multi"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 3}, {"id": "prod-ceviche-clasico-norteno-ceviches-mariscos", "categoriaId": "ceviches-mariscos", "nombre": "Ceviche Clásico Norteño", "descripcion": "Acompañado de cebolla, choclo o zarandaja, yuca, camote y cancha. Conchas negras y langostinos", "precioPersonal": 42, "precioFuente": 94, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 0}, {"id": "prod-ceviche-de-cangrejos-ceviches-mariscos", "categoriaId": "ceviches-mariscos", "nombre": "Ceviche de Cangrejos", "descripcion": "Acompañado de cebolla, choclo o zarandaja, yuca, camote y cancha. Cangrejos", "precioPersonal": 44, "precioFuente": 89, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 1}, {"id": "prod-ceviche-de-langostinos-ceviches-mariscos", "categoriaId": "ceviches-mariscos", "nombre": "Ceviche de Langostinos", "descripcion": "Acompañado de cebolla, choclo o zarandaja, yuca, camote y cancha. Langostinos", "precioPersonal": 37, "precioFuente": 74, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 2}, {"id": "prod-ceviche-de-mariscos-ceviches-mariscos", "categoriaId": "ceviches-mariscos", "nombre": "Ceviche de Mariscos", "descripcion": "Acompañado de cebolla, choclo o zarandaja, yuca, camote y cancha. Mariscos", "precioPersonal": 40, "precioFuente": 90, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 3}, {"id": "prod-ceviche-de-pulpo-ceviches-mariscos", "categoriaId": "ceviches-mariscos", "nombre": "Ceviche de Pulpo", "descripcion": "Acompañado de cebolla, choclo o zarandaja, yuca, camote y cancha. Pulpo", "precioPersonal": 42, "precioFuente": 84, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Sin camote", "Más cancha", "Extra limón", "Ají aparte", "Para llevar"], "orden": 4}, {"id": "prod-chicharron-mixto-chicharrones", "categoriaId": "chicharrones", "nombre": "Chicharrón Mixto", "descripcion": "Pescado y mariscos", "precioPersonal": 37, "precioFuente": 76, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-chicharron-simple-chicharrones", "categoriaId": "chicharrones", "nombre": "Chicharrón Simple", "descripcion": "Pescado", "precioPersonal": 32, "precioFuente": 66, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 1}, {"id": "prod-chicharron-de-langostinos-chicharrones", "categoriaId": "chicharrones", "nombre": "Chicharrón de Langostinos", "descripcion": "Langostinos", "precioPersonal": 37, "precioFuente": 74, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 2}, {"id": "prod-chicharron-de-mariscos-chicharrones", "categoriaId": "chicharrones", "nombre": "Chicharrón de Mariscos", "descripcion": "Mariscos", "precioPersonal": 37, "precioFuente": 76, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 3}, {"id": "prod-chicharron-de-pollo-chicharrones", "categoriaId": "chicharrones", "nombre": "Chicharrón de Pollo", "descripcion": "Pollo", "precioPersonal": 32, "precioFuente": 64, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 4}, {"id": "prod-chicharron-de-pulpo-o-calamar-chicharrones", "categoriaId": "chicharrones", "nombre": "Chicharrón de Pulpo o Calamar", "descripcion": "Pulpo o calamar", "precioPersonal": 42, "precioFuente": 84, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 5}, {"id": "prod-chicharron-especial-de-corvina-robalo-chicharrones-especiales", "categoriaId": "chicharrones-especiales", "nombre": "Chicharrón Especial de Corvina-Robalo", "descripcion": "Acompañado de yuca frita o sancochada, ensalada y cremas", "precioPersonal": 49, "precioFuente": null, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Corvina", "Róbalo"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-sudado-clasico-sudados", "categoriaId": "sudados", "nombre": "Sudado Clásico", "descripcion": "Chita, corvina, robalo u ojo de uva. Pescado y conchas negras", "precioPersonal": 53, "precioFuente": 106, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Corvina", "Chita", "Róbalo", "Ojo de Uva"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-sudado-mixto-sudados", "categoriaId": "sudados", "nombre": "Sudado Mixto", "descripcion": "Chita, corvina, robalo u ojo de uva. Pescado y mariscos", "precioPersonal": 53, "precioFuente": 106, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Chita", "Corvina", "Róbalo", "Ojo de Uva"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 1}, {"id": "prod-sudado-simple-sudados", "categoriaId": "sudados", "nombre": "Sudado Simple", "descripcion": "Chita, corvina, robalo u ojo de uva. Pescado", "precioPersonal": 45, "precioFuente": 90, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Chita", "Corvina", "Róbalo", "Ojo de Uva"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 2}, {"id": "prod-sudado-de-cangrejos-sudados", "categoriaId": "sudados", "nombre": "Sudado de Cangrejos", "descripcion": "Chita, corvina, robalo u ojo de uva. Cangrejos", "precioPersonal": 42, "precioFuente": 84, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 3}, {"id": "prod-sudado-de-conchas-negras-sudados", "categoriaId": "sudados", "nombre": "Sudado de Conchas Negras", "descripcion": "Chita, corvina, robalo u ojo de uva. Pescado y conchas negras", "precioPersonal": 40, "precioFuente": 79, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Chita", "Corvina", "Róbalo", "Ojo de Uva"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 4}, {"id": "prod-sudado-de-langostinos-sudados", "categoriaId": "sudados", "nombre": "Sudado de Langostinos", "descripcion": "Chita, corvina, robalo u ojo de uva. Langostinos", "precioPersonal": 37, "precioFuente": 74, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 5}, {"id": "prod-arroz-con-conchas-negras-arroces", "categoriaId": "arroces", "nombre": "Arroz con Conchas Negras", "descripcion": "Acompañado de ensaladas y cremas. Conchas negras", "precioPersonal": 40, "precioFuente": 79, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-arroz-con-langostinos-arroces", "categoriaId": "arroces", "nombre": "Arroz con Langostinos", "descripcion": "Acompañado de ensaladas y cremas. Langostinos", "precioPersonal": 37, "precioFuente": 74, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 1}, {"id": "prod-arroz-con-mariscos-arroces", "categoriaId": "arroces", "nombre": "Arroz con Mariscos", "descripcion": "Acompañado de ensaladas y cremas. Mariscos", "precioPersonal": 33, "precioFuente": 68, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 2}, {"id": "prod-arroz-con-pescado-en-trozos-arroces", "categoriaId": "arroces", "nombre": "Arroz con Pescado en Trozos", "descripcion": "Acompañado de ensaladas y cremas. Pescado", "precioPersonal": 32, "precioFuente": 64, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 3}, {"id": "prod-arroz-con-pulpo-arroces", "categoriaId": "arroces", "nombre": "Arroz con Pulpo", "descripcion": "Acompañado de ensaladas y cremas. Pulpo", "precioPersonal": 42, "precioFuente": 84, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 4}, {"id": "prod-chaufa-con-mariscos-chaufas", "categoriaId": "chaufas", "nombre": "Chaufa con Mariscos", "descripcion": "Mariscos", "precioPersonal": 33, "precioFuente": 68, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-chaufa-de-langostinos-chaufas", "categoriaId": "chaufas", "nombre": "Chaufa de Langostinos", "descripcion": "Langostinos", "precioPersonal": 35, "precioFuente": 72, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 1}, {"id": "prod-chaufa-de-pescado-chaufas", "categoriaId": "chaufas", "nombre": "Chaufa de Pescado", "descripcion": "Pescado", "precioPersonal": 32, "precioFuente": 66, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 2}, {"id": "prod-chaufa-de-pulpo-chaufas", "categoriaId": "chaufas", "nombre": "Chaufa de Pulpo", "descripcion": "Pulpo", "precioPersonal": 42, "precioFuente": 84, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 3}, {"id": "prod-picante-de-langostinos-picantes", "categoriaId": "picantes", "nombre": "Picante de Langostinos", "descripcion": "Acompañado con yuca. Langostinos", "precioPersonal": 37, "precioFuente": 74, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-picante-de-mariscos-picantes", "categoriaId": "picantes", "nombre": "Picante de Mariscos", "descripcion": "Acompañado con yuca. Mariscos", "precioPersonal": 42, "precioFuente": 84, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 1}, {"id": "prod-picante-de-pulpo-o-calamar-picantes", "categoriaId": "picantes", "nombre": "Picante de Pulpo o Calamar", "descripcion": "Acompañado con yuca. Pulpo o calamar", "precioPersonal": 42, "precioFuente": 84, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 2}, {"id": "prod-chupe-de-langostino-chupes", "categoriaId": "chupes", "nombre": "Chupe de Langostino", "descripcion": "Langostinos", "precioPersonal": 37, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-chupe-de-mariscos-chupes", "categoriaId": "chupes", "nombre": "Chupe de Mariscos", "descripcion": "Mariscos", "precioPersonal": 42, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 1}, {"id": "prod-chupe-de-pescado-chupes", "categoriaId": "chupes", "nombre": "Chupe de Pescado", "descripcion": "Pescado", "precioPersonal": 47, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 2}, {"id": "prod-jalea-mixta-jaleas", "categoriaId": "jaleas", "nombre": "Jalea Mixta", "descripcion": "Acompañada con yuca. Apanado, chicharrón mixto y salsa criolla", "precioPersonal": 47, "precioFuente": 94, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}, {"id": "pref-aparte", "nombre": "Servir aparte", "opciones": ["Apanado aparte", "Chicharrón aparte"], "tipo": "multi"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-jalea-simple-jaleas", "categoriaId": "jaleas", "nombre": "Jalea Simple", "descripcion": "Acompañada con yuca. Apanado, chicharrón de pescado y salsa criolla", "precioPersonal": 42, "precioFuente": 84, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}, {"id": "pref-aparte", "nombre": "Servir aparte", "opciones": ["Apanado aparte", "Chicharrón aparte"], "tipo": "multi"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 1}, {"id": "prod-a-lo-macho-frituras", "categoriaId": "frituras", "nombre": "A lo Macho", "descripcion": "Chita, corvina, robalo u ojo de uva. Pescado frito bañado en picante de mariscos, con arroz y yuca", "precioPersonal": 62, "precioFuente": null, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Chita", "Corvina", "Róbalo", "Ojo de Uva"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-al-ajo-frituras", "categoriaId": "frituras", "nombre": "Al Ajo", "descripcion": "Chita, corvina, robalo u ojo de uva. Pescado frito bañado en crema de ajos, con arroz y yuca", "precioPersonal": 50, "precioFuente": null, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Chita", "Corvina", "Róbalo", "Ojo de Uva"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 1}, {"id": "prod-frita-frituras", "categoriaId": "frituras", "nombre": "Frita", "descripcion": "Chita, corvina, robalo u ojo de uva. Con arroz, yuca y ensalada", "precioPersonal": 44, "precioFuente": null, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Chita", "Corvina", "Róbalo", "Ojo de Uva"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 2}, {"id": "prod-apanado-de-corvina-robalo-apanados", "categoriaId": "apanados", "nombre": "Apanado de Corvina-Robalo", "descripcion": "Con arroz, yuca y ensalada", "precioPersonal": 49, "precioFuente": null, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Corvina", "Róbalo"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-apanado-de-tollo-apanados", "categoriaId": "apanados", "nombre": "Apanado de Tollo", "descripcion": "Con arroz, yuca y ensalada", "precioPersonal": 32, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 1}, {"id": "prod-corvina-robalo-ojo-de-uva-parrillas", "categoriaId": "parrillas", "nombre": "Corvina-Robalo-Ojo de Uva", "descripcion": "Acompañada con yuca", "precioPersonal": 54, "precioFuente": 107, "preferencias": [{"id": "pref-pescado", "nombre": "Tipo de pescado", "opciones": ["Corvina", "Róbalo", "Ojo de Uva"], "tipo": "single"}, {"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-chilcano-chilcano", "categoriaId": "chilcano", "nombre": "Chilcano", "descripcion": "Acompañado con yuca. Cabeza de pescado", "precioPersonal": 22, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-cangrejo-reventado-platos-especiales", "categoriaId": "platos-especiales", "nombre": "Cangrejo Reventado", "descripcion": "Con yuca", "precioPersonal": 44, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 0}, {"id": "prod-pescado-en-salsa-de-langostinos-platos-especiales", "categoriaId": "platos-especiales", "nombre": "Pescado en Salsa de Langostinos", "descripcion": "Pescado frito con picante de langostinos", "precioPersonal": 59, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 1}, {"id": "prod-sudado-clasico-norteno-platos-especiales", "categoriaId": "platos-especiales", "nombre": "Sudado Clásico Norteño", "descripcion": "Conchas negras y langostinos", "precioPersonal": 42, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 2}, {"id": "prod-tortilla-de-langostinos-platos-especiales", "categoriaId": "platos-especiales", "nombre": "Tortilla de Langostinos", "descripcion": "Con arroz, yuca y ensalada", "precioPersonal": 37, "precioFuente": null, "preferencias": [{"id": "pref-picante", "nombre": "Nivel de picante", "opciones": ["Normal", "Sin picante", "Poco picante", "Bien picante"], "tipo": "single"}], "observacionesSugeridas": ["Sin cebolla", "Extra limón", "Para llevar"], "orden": 3}, {"id": "prod-corona-cerveza", "categoriaId": "cerveza", "nombre": "Corona", "descripcion": "", "precioPersonal": 10, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 0}, {"id": "prod-cusquena-blanca-cerveza", "categoriaId": "cerveza", "nombre": "Cusqueña Blanca", "descripcion": "", "precioPersonal": 11, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 1}, {"id": "prod-cusquena-blanca-personal-cerveza", "categoriaId": "cerveza", "nombre": "Cusqueña Blanca Personal", "descripcion": "", "precioPersonal": 7, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 2}, {"id": "prod-cusquena-negra-cerveza", "categoriaId": "cerveza", "nombre": "Cusqueña Negra", "descripcion": "", "precioPersonal": 11, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 3}, {"id": "prod-cusquena-de-trigo-cerveza", "categoriaId": "cerveza", "nombre": "Cusqueña de Trigo", "descripcion": "", "precioPersonal": 11, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 4}, {"id": "prod-pilsen-callao-cerveza", "categoriaId": "cerveza", "nombre": "Pilsen Callao", "descripcion": "", "precioPersonal": 10, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 5}, {"id": "prod-pilsen-trujillo-cerveza", "categoriaId": "cerveza", "nombre": "Pilsen Trujillo", "descripcion": "", "precioPersonal": 10, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 6}, {"id": "prod-agua-mineral-bebidas", "categoriaId": "bebidas", "nombre": "Agua Mineral", "descripcion": "", "precioPersonal": 3.5, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 0}, {"id": "prod-gaseosa-1-1-2-litro-bebidas", "categoriaId": "bebidas", "nombre": "Gaseosa 1 1/2 Litro", "descripcion": "", "precioPersonal": 10, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 1}, {"id": "prod-gaseosa-1-litro-bebidas", "categoriaId": "bebidas", "nombre": "Gaseosa 1 Litro", "descripcion": "", "precioPersonal": 10, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 2}, {"id": "prod-gaseosa-light-bebidas", "categoriaId": "bebidas", "nombre": "Gaseosa Light", "descripcion": "", "precioPersonal": 5, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 3}, {"id": "prod-gaseosa-mediana-bebidas", "categoriaId": "bebidas", "nombre": "Gaseosa Mediana", "descripcion": "", "precioPersonal": 3, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 4}, {"id": "prod-gordita-o-jumbo-bebidas", "categoriaId": "bebidas", "nombre": "Gordita o Jumbo", "descripcion": "", "precioPersonal": 6, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 5}, {"id": "prod-chicha-morada-bebidas-naturales", "categoriaId": "bebidas-naturales", "nombre": "Chicha Morada", "descripcion": "", "precioPersonal": 15, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 0}, {"id": "prod-limonada-bebidas-naturales", "categoriaId": "bebidas-naturales", "nombre": "Limonada", "descripcion": "", "precioPersonal": 13, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 1}, {"id": "prod-limonada-cherry-bebidas-naturales", "categoriaId": "bebidas-naturales", "nombre": "Limonada Cherry", "descripcion": "", "precioPersonal": 15, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 2}, {"id": "prod-limonada-electrica-bebidas-naturales", "categoriaId": "bebidas-naturales", "nombre": "Limonada Eléctrica", "descripcion": "", "precioPersonal": 15, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 3}, {"id": "prod-limonada-fresh-bebidas-naturales", "categoriaId": "bebidas-naturales", "nombre": "Limonada Fresh", "descripcion": "", "precioPersonal": 15, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 4}, {"id": "prod-limonada-frozen-bebidas-naturales", "categoriaId": "bebidas-naturales", "nombre": "Limonada Frozen", "descripcion": "", "precioPersonal": 15, "precioFuente": null, "preferencias": [], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 5}, {"id": "prod-maracuya-bebidas-naturales", "categoriaId": "bebidas-naturales", "nombre": "Maracuyá", "descripcion": "", "precioPersonal": 13, "precioFuente": null, "preferencias": [{"id": "pref-temp", "nombre": "Temperatura", "opciones": ["Helada", "Sin helar"], "tipo": "single"}], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 6}, {"id": "prod-maracuya-frozen-bebidas-naturales", "categoriaId": "bebidas-naturales", "nombre": "Maracuyá Frozen", "descripcion": "", "precioPersonal": 15, "precioFuente": null, "preferencias": [], "observacionesSugeridas": ["Con hielo", "Para llevar"], "orden": 7}];
+
+var CATEGORIA_NOTAS = {
+  "ceviches-especiales": "Preparados con corvina o robalo.",
+  "ceviches-mariscos": "Acompañado de cebolla, choclo o zarandaja, yuca, camote y cancha.",
+  "sudados": "Chita, corvina, robalo u ojo de uva.",
+  "arroces": "Acompañado de ensaladas y cremas.",
+  "picantes": "Acompañado con yuca.",
+  "jaleas": "Acompañada con yuca.",
+  "frituras": "Chita, corvina, robalo u ojo de uva.",
+  "parrillas": "Acompañada con yuca.",
+  "chilcano": "Acompañado con yuca."
+};
+
+/* ============================== STATE ============================== */
+
+var S = {
+  ready:false,
+  dbMode:null, /* 'cloud' | 'local' */
+  ambientes:[],
+  mesas:[],
+  productos:[],
+  pedidos:[],
+  selectedAmbienteId:null,
+  organize:false,
+  organizeCarta:false,
+  tema:"light",
+  stack:[{screen:"home"}],
+  modal:null,
+  confirm:null,
+  toast:null,
+  cartaOpenSections:{},
+  busy:false
+};
+
+function current(){ return S.stack[S.stack.length-1]; }
+function push(screen, params){
+  S.stack.push({screen:screen, params:params||{}});
+  try{ history.pushState({depth:S.stack.length}, ""); }catch(e){}
+  render();
+}
+function replaceTop(screen, params){ S.stack[S.stack.length-1] = {screen:screen, params:params||{}}; render(); }
+function goBack(){
+  if(S.stack.length>1){
+    try{ history.back(); }catch(e){ S.stack.pop(); render(); }
+  }
+}
+function goHome(){
+  S.stack=[{screen:"home"}];
+  try{ history.replaceState({depth:1}, ""); }catch(e){}
+  render();
+}
+/* Botón físico/gesto "Atrás" de Android: cierra primero lo que esté abierto
+   encima (confirmación, luego modal) y solo después navega de pantalla,
+   en vez de cerrar la app. */
+window.addEventListener("popstate", function(){
+  if(S.confirm){ S.confirm=null; renderModal(); return; }
+  if(S.modal){ S.modal=null; renderModal(); return; }
+  if(S.stack.length>1){ S.stack.pop(); render(); }
+});
+
+/* ============================== TEMA (modo día / modo noche) ============================== */
+
+var TEMA_KEY = "comanda_tema";
+function initTema(){
+  var saved = null;
+  try{ saved = localStorage.getItem(TEMA_KEY); }catch(e){}
+  if(saved==="light" || saved==="dark"){
+    S.tema = saved;
+  } else {
+    var prefersDark = false;
+    try{ prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches; }catch(e){}
+    S.tema = prefersDark ? "dark" : "light";
+  }
+  aplicarTema();
+}
+function aplicarTema(){
+  try{ document.documentElement.setAttribute("data-theme", S.tema); }catch(e){}
+}
+function toggleTema(){
+  S.tema = (S.tema==="dark") ? "light" : "dark";
+  aplicarTema();
+  try{ localStorage.setItem(TEMA_KEY, S.tema); }catch(e){}
+}
+
+/* ============================== STORE (db capability + local fallback) ============================== */
+
+var DB = null;
+
+function createLocalStore(){
+  var LS_KEY = "comanda_local_store_v1";
+  var collections = {};
+  var listeners = {};
+  function ensure(name){
+    if(!collections[name]) collections[name] = {};
+    if(!listeners[name]) listeners[name] = [];
+    return collections[name];
+  }
+  function persist(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(collections)); }catch(e){}
+  }
+  function hydrate(){
+    try{
+      var raw = localStorage.getItem(LS_KEY);
+      if(raw) collections = JSON.parse(raw);
+    }catch(e){}
+  }
+  hydrate();
+  /* First run only: seed the on-device menu from the embedded catalog. */
+  (function seedIfEmpty(){
+    var existing = ensure("productos");
+    if(Object.keys(existing).length>0) return;
+    if(!SEED_PRODUCTOS || !SEED_PRODUCTOS.length) return;
+    SEED_PRODUCTOS.forEach(function(p){
+      var copy = {};
+      for(var k in p){ if(k!=="id") copy[k]=p[k]; }
+      existing[p.id] = copy;
+    });
+    persist();
+  })();
+  function snapshotDocs(name){
+    var map = ensure(name);
+    return Object.keys(map).map(function(id){
+      var data = map[id];
+      return {id:id, exists:true, data:function(){ return data; }};
+    });
+  }
+  function notify(name){
+    persist();
+    var docs = snapshotDocs(name);
+    var snap = {docs:docs, size:docs.length, empty:docs.length===0};
+    (listeners[name]||[]).forEach(function(fn){ fn(snap); });
+  }
+  function makeDocRef(name, id){
+    return {
+      id:id,
+      get:function(){
+        var map=ensure(name);
+        var d=map[id];
+        return Promise.resolve({id:id, exists: d!==undefined, data:function(){return d;}});
+      },
+      set:function(data){
+        var map=ensure(name);
+        map[id]=JSON.parse(JSON.stringify(data));
+        notify(name);
+        return Promise.resolve();
+      },
+      update:function(data){
+        var map=ensure(name);
+        var cur=map[id]||{};
+        map[id]=Object.assign({}, cur, JSON.parse(JSON.stringify(data)));
+        notify(name);
+        return Promise.resolve();
+      },
+      delete:function(){
+        var map=ensure(name);
+        delete map[id];
+        notify(name);
+        return Promise.resolve();
+      }
+    };
+  }
+  var counter=0;
+  function collection(name){
+    return {
+      doc:function(id){
+        var docId = id || ("local_"+Date.now().toString(36)+"_"+(counter++));
+        return makeDocRef(name, docId);
+      },
+      add:function(data){
+        var ref = this.doc();
+        return ref.set(data).then(function(){ return ref; });
+      },
+      onSnapshot:function(next){
+        listeners[name] = listeners[name]||[];
+        listeners[name].push(next);
+        var docs = snapshotDocs(name);
+        next({docs:docs, size:docs.length, empty:docs.length===0});
+        return function(){
+          listeners[name] = (listeners[name]||[]).filter(function(f){return f!==next;});
+        };
+      }
+    };
+  }
+  return {collection:collection};
+}
+
+function initStore(){
+  if(window.claude && typeof window.claude.use === "function"){
+    window.claude.use("db").then(function(ns){
+      if(ns){
+        DB = ns;
+        S.dbMode = "cloud";
+      } else {
+        DB = createLocalStore();
+        S.dbMode = "local";
+      }
+      subscribeAll();
+    }).catch(function(){
+      DB = createLocalStore();
+      S.dbMode = "local";
+      subscribeAll();
+    });
+  } else {
+    DB = createLocalStore();
+    S.dbMode = "local";
+    subscribeAll();
+  }
+}
+
+function subscribeAll(){
+  subscribeCollection("ambientes","ambientes");
+  subscribeCollection("mesas","mesas");
+  subscribeCollection("productos","productos");
+  subscribeCollection("pedidos","pedidos");
+}
+function subscribeCollection(name, key){
+  DB.collection(name).onSnapshot(function(snap){
+    S[key] = snap.docs.filter(function(d){return d.exists;}).map(function(d){
+      var data = d.data()||{};
+      var o = {id:d.id};
+      for(var k in data) o[k]=data[k];
+      return o;
+    });
+    S.ready = true;
+    if(key==="pedidos") purgeHistorialViejo();
+    render();
+  }, function(err){
+    console.error("db error", name, err);
+  });
+}
+setInterval(function(){ purgeHistorialViejo(); }, 10*60*1000);
+
+/* ============================== HELPERS ============================== */
+
+function money(n){
+  n = Number(n)||0;
+  var isInt = Math.round(n*100)%100===0;
+  return "S/ " + (isInt ? n.toFixed(0) : n.toFixed(2));
+}
+function escapeHtml(s){
+  if(s===undefined||s===null) return "";
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function uid(prefix){
+  return (prefix||"id")+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+}
+function byOrden(a,b){ return (a.orden||0)-(b.orden||0); }
+function nextOrden(list){
+  var m=0;
+  list.forEach(function(x){ if((x.orden||0)>m) m=x.orden||0; });
+  return m+1;
+}
+function ambientesOrdenadas(){ return S.ambientes.slice().sort(byOrden); }
+function mesasDeAmbiente(ambienteId){ return S.mesas.filter(function(m){return m.ambienteId===ambienteId;}).sort(byOrden); }
+function productosDeCategoria(catId){ return S.productos.filter(function(p){return p.categoriaId===catId;}).sort(function(a,b){
+  var oa = a.orden, ob = b.orden;
+  if(oa==null && ob==null) return (a.nombre||"").localeCompare(b.nombre||"");
+  if(oa==null) return 1;
+  if(ob==null) return -1;
+  return oa-ob;
+}); }
+function getMesa(id){ return S.mesas.filter(function(m){return m.id===id;})[0]; }
+function getAmbiente(id){ return S.ambientes.filter(function(a){return a.id===id;})[0]; }
+function getProducto(id){ return S.productos.filter(function(p){return p.id===id;})[0]; }
+function getPedido(id){ return S.pedidos.filter(function(p){return p.id===id;})[0]; }
+function activePedidoForMesa(mesaId){
+  var list = S.pedidos.filter(function(p){return p.mesaId===mesaId && p.estado!=="archivado";});
+  return list[0];
+}
+function itemsTotal(items){
+  var t=0;
+  (items||[]).forEach(function(it){ t+=it.subtotal||0; });
+  return t;
+}
+function allItemsServidos(pedido){
+  var items = pedido ? (pedido.items||[]) : [];
+  return items.length>0 && items.every(function(it){return !!it.servido;});
+}
+function mesaEstado(mesaId){
+  var p = activePedidoForMesa(mesaId);
+  if(!p) return "libre";
+  if(allItemsServidos(p)) return "atendida";
+  return p.estado==="cerrado" ? "cerrado" : "abierto";
+}
+
+function showToast(msg){
+  S.toast = {msg:msg, key:uid("t")};
+  renderToast();
+  var mine = S.toast.key;
+  setTimeout(function(){
+    if(S.toast && S.toast.key===mine){ S.toast=null; renderToast(); }
+  }, 1900);
+}
+
+function setBusy(v){ S.busy=v; }
+
+/* ============================== CRUD ============================== */
+
+function addAmbiente(nombre){
+  var ref = DB.collection("ambientes").doc();
+  return ref.set({nombre:nombre, orden:nextOrden(S.ambientes)});
+}
+function updateAmbiente(id, patch){ return DB.collection("ambientes").doc(id).update(patch); }
+function deleteAmbienteCascade(id){
+  var mesas = mesasDeAmbiente(id);
+  var proms = mesas.map(function(m){ return deleteMesaCascade(m.id); });
+  return Promise.all(proms).then(function(){
+    return DB.collection("ambientes").doc(id).delete();
+  });
+}
+function moveAmbiente(id, dir){
+  var list = ambientesOrdenadas();
+  var idx = list.findIndex(function(a){return a.id===id;});
+  var swapIdx = idx+dir;
+  if(idx<0||swapIdx<0||swapIdx>=list.length) return Promise.resolve();
+  var a=list[idx], b=list[swapIdx];
+  var oa=a.orden||0, ob=b.orden||0;
+  return Promise.all([
+    DB.collection("ambientes").doc(a.id).update({orden:ob}),
+    DB.collection("ambientes").doc(b.id).update({orden:oa})
+  ]);
+}
+
+function addMesa(ambienteId, numero){
+  var ref = DB.collection("mesas").doc();
+  return ref.set({ambienteId:ambienteId, numero:numero, orden:nextOrden(mesasDeAmbiente(ambienteId))});
+}
+function updateMesa(id, patch){ return DB.collection("mesas").doc(id).update(patch); }
+function deleteMesaCascade(id){
+  var peds = S.pedidos.filter(function(p){return p.mesaId===id;});
+  var proms = peds.map(function(p){ return DB.collection("pedidos").doc(p.id).delete(); });
+  return Promise.all(proms).then(function(){
+    return DB.collection("mesas").doc(id).delete();
+  });
+}
+function moveMesa(id, dir){
+  var mesa = getMesa(id);
+  if(!mesa) return Promise.resolve();
+  var list = mesasDeAmbiente(mesa.ambienteId);
+  var idx = list.findIndex(function(m){return m.id===id;});
+  var swapIdx = idx+dir;
+  if(idx<0||swapIdx<0||swapIdx>=list.length) return Promise.resolve();
+  var a=list[idx], b=list[swapIdx];
+  var oa=a.orden||0, ob=b.orden||0;
+  return Promise.all([
+    DB.collection("mesas").doc(a.id).update({orden:ob}),
+    DB.collection("mesas").doc(b.id).update({orden:oa})
+  ]);
+}
+
+function addProducto(data){
+  var payload = Object.assign({}, data, {orden: nextOrden(productosDeCategoria(data.categoriaId))});
+  return DB.collection("productos").add(payload);
+}
+function updateProducto(id, patch){ return DB.collection("productos").doc(id).update(patch); }
+function deleteProducto(id){ return DB.collection("productos").doc(id).delete(); }
+function moveProducto(id, dir){
+  var prod = getProducto(id);
+  if(!prod) return Promise.resolve();
+  var list = productosDeCategoria(prod.categoriaId);
+  var idx = list.findIndex(function(p){return p.id===id;});
+  var swapIdx = idx+dir;
+  if(idx<0||swapIdx<0||swapIdx>=list.length) return Promise.resolve();
+  var a=list[idx], b=list[swapIdx];
+  var oa = a.orden!=null ? a.orden : idx;
+  var ob = b.orden!=null ? b.orden : swapIdx;
+  return Promise.all([
+    DB.collection("productos").doc(a.id).update({orden:ob}),
+    DB.collection("productos").doc(b.id).update({orden:oa})
+  ]);
+}
+
+function ensurePedido(mesaId){
+  var existing = activePedidoForMesa(mesaId);
+  if(existing) return Promise.resolve(existing);
+  var mesa = getMesa(mesaId);
+  var ref = DB.collection("pedidos").doc();
+  var data = {
+    mesaId:mesaId,
+    ambienteId: mesa ? mesa.ambienteId : null,
+    estado:"abierto",
+    items:[],
+    total:0,
+    creadoEn:new Date().toISOString(),
+    actualizadoEn:new Date().toISOString()
+  };
+  return ref.set(data).then(function(){
+    var o = {id:ref.id};
+    for(var k in data) o[k]=data[k];
+    return o;
+  });
+}
+
+function saveItemToPedido(mesaId, item, editingItemId){
+  return ensurePedido(mesaId).then(function(pedido){
+    var items = (pedido.items||[]).slice();
+    if(editingItemId){
+      items = items.map(function(it){ return it.id===editingItemId ? item : it; });
+    } else {
+      items.push(item);
+    }
+    var total = itemsTotal(items);
+    return DB.collection("pedidos").doc(pedido.id).update({items:items, total:total, actualizadoEn:new Date().toISOString()});
+  });
+}
+function updateItemQty(mesaId, itemId, delta){
+  var pedido = activePedidoForMesa(mesaId);
+  if(!pedido) return;
+  var items = pedido.items.map(function(it){
+    if(it.id!==itemId) return it;
+    var q = Math.max(1, (it.cantidad||1)+delta);
+    return Object.assign({}, it, {cantidad:q, subtotal: q*it.precioUnit});
+  });
+  var total = itemsTotal(items);
+  DB.collection("pedidos").doc(pedido.id).update({items:items, total:total, actualizadoEn:new Date().toISOString()});
+}
+function toggleItemServido(mesaId, itemId){
+  var pedido = activePedidoForMesa(mesaId);
+  if(!pedido) return;
+  var items = pedido.items.map(function(it){
+    if(it.id!==itemId) return it;
+    return Object.assign({}, it, {servido: !it.servido});
+  });
+  DB.collection("pedidos").doc(pedido.id).update({items:items, actualizadoEn:new Date().toISOString()});
+}
+function removeItem(mesaId, itemId){
+  var pedido = activePedidoForMesa(mesaId);
+  if(!pedido) return;
+  var items = pedido.items.filter(function(it){return it.id!==itemId;});
+  var total = itemsTotal(items);
+  DB.collection("pedidos").doc(pedido.id).update({items:items, total:total, actualizadoEn:new Date().toISOString()});
+}
+function toggleEstadoPedido(mesaId){
+  var pedido = activePedidoForMesa(mesaId);
+  if(!pedido) return;
+  var nuevo = pedido.estado==="cerrado" ? "abierto" : "cerrado";
+  DB.collection("pedidos").doc(pedido.id).update({estado:nuevo, actualizadoEn:new Date().toISOString()});
+}
+function liberarMesa(mesaId){
+  var pedido = activePedidoForMesa(mesaId);
+  if(!pedido) return;
+  var now = new Date().toISOString();
+  DB.collection("pedidos").doc(pedido.id).update({estado:"archivado", archivadoEn:now, actualizadoEn:now});
+}
+
+/* ============================== HISTORIAL (mesas atendidas) ============================== */
+
+var HISTORIAL_MS = 12*60*60*1000; /* 12 horas */
+
+function historialOrdenado(){
+  return S.pedidos.filter(function(p){return p.estado==="archivado";})
+    .slice()
+    .sort(function(a,b){
+      var ta = new Date(a.archivadoEn||a.actualizadoEn||0).getTime();
+      var tb = new Date(b.archivadoEn||b.actualizadoEn||0).getTime();
+      return tb-ta;
+    });
+}
+function purgeHistorialViejo(){
+  if(!DB) return;
+  var now = Date.now();
+  S.pedidos.forEach(function(p){
+    if(p.estado!=="archivado") return;
+    var t = new Date(p.archivadoEn||p.actualizadoEn||0).getTime();
+    if(!t || (now-t) > HISTORIAL_MS){
+      DB.collection("pedidos").doc(p.id).delete();
+    }
+  });
+}
+function formatFechaHora(iso){
+  try{
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return "";
+    return d.toLocaleString("es-PE", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
+  }catch(e){ return ""; }
+}
+
+/* ============================== RENDER: SHELL ============================== */
+
+function renderShell(opts){
+  var html = "";
+  html += '<div class="appbar">';
+  if(opts.back){
+    html += '<button class="iconbtn" data-action="back" aria-label="Volver">&#8592;</button>';
+  }
+  html += '<div class="titles"><h1>'+escapeHtml(opts.title)+'</h1>';
+  if(opts.sub) html += '<div class="sub">'+escapeHtml(opts.sub)+'</div>';
+  html += '</div>';
+  if(opts.actionsHtml) html += '<div class="appbar-actions">'+opts.actionsHtml+'</div>';
+  html += '</div>';
+  if(!S.ready){
+    html += '<div class="loadingnote">Cargando datos'+(S.dbMode==="local"?" (modo local, sin conexión a la nube)":"")+'&hellip;</div>';
+  } else if(S.dbMode==="local"){
+    html += '<div class="loadingnote">Modo local: los cambios se guardan solo en este dispositivo.</div>';
+  }
+  html += '<div class="page-body">'+opts.body+'</div>';
+  return html;
+}
+
+/* ============================== RENDER: HOME ============================== */
+
+function renderHome(){
+  var ambientes = ambientesOrdenadas();
+  if(!S.selectedAmbienteId || !getAmbiente(S.selectedAmbienteId)){
+    S.selectedAmbienteId = ambientes.length ? ambientes[0].id : null;
+  }
+
+  var chips = "";
+  ambientes.forEach(function(a){
+    var active = a.id===S.selectedAmbienteId;
+    chips += '<div class="chip'+(active?" active":"")+'" data-action="select-ambiente" data-id="'+a.id+'">';
+    chips += '<span>'+escapeHtml(a.nombre)+'</span>';
+    if(S.organize){
+      chips += '<span class="mini" data-action="edit-ambiente" data-id="'+a.id+'" title="Editar">&#9998;</span>';
+    }
+    chips += '</div>';
+  });
+  chips += '<div class="chip dashed" data-action="add-ambiente">+ Nuevo ambiente</div>';
+
+  var body = "";
+  if(ambientes.length===0){
+    body += '<div class="empty"><div class="icon">&#127960;</div><h3>Crea tu primer ambiente</h3>'+
+      '<p>Un ambiente agrupa mesas: Salón, Terraza, Segundo piso&hellip;</p>'+
+      '<button class="btn primary" data-action="add-ambiente">Crear ambiente</button></div>';
+  } else {
+    var ambiente = getAmbiente(S.selectedAmbienteId);
+    if(S.organize && ambiente){
+      body += '<div class="section-title">Organizar &ldquo;'+escapeHtml(ambiente.nombre)+'&rdquo;</div>';
+      body += '<div style="display:flex;gap:8px;margin-bottom:14px;">'+
+        '<button class="btn secondary sm" data-action="move-ambiente" data-dir="-1" data-id="'+ambiente.id+'">&#8592; Mover ambiente</button>'+
+        '<button class="btn secondary sm" data-action="move-ambiente" data-dir="1" data-id="'+ambiente.id+'">Mover ambiente &#8594;</button>'+
+        '</div>';
+      body += '<button class="btn danger sm block" style="margin-bottom:14px;" data-action="delete-ambiente" data-id="'+ambiente.id+'">Eliminar ambiente &ldquo;'+escapeHtml(ambiente.nombre)+'&rdquo;</button>';
+    }
+    var mesas = ambiente ? mesasDeAmbiente(ambiente.id) : [];
+    body += '<div class="section-title">Mesas</div>';
+    body += '<div class="grid">';
+    mesas.forEach(function(m){
+      var est = mesaEstado(m.id);
+      var pedido = activePedidoForMesa(m.id);
+      var dotColor = est==="libre"?"var(--success)":est==="cerrado"?"var(--warning)":est==="atendida"?"var(--teal)":"var(--accent)";
+      var estLabel = est==="libre"?"Libre":est==="cerrado"?"Cerrada":est==="atendida"?"&#10003; Atendida":"Ocupada";
+      body += '<div class="tile '+est+'" data-action="'+(S.organize?"noop":"open-mesa")+'" data-id="'+m.id+'">';
+      body += '<span class="status-dot" style="background:'+dotColor+'"></span>';
+      body += '<div class="num">'+escapeHtml(m.numero)+'</div>';
+      body += '<div class="status-label">'+estLabel+'</div>';
+      if(pedido && itemsTotal(pedido.items)>0){
+        body += '<div class="total">'+money(itemsTotal(pedido.items))+'</div>';
+        var servN = pedido.items.filter(function(it){return it.servido;}).length;
+        body += '<div class="servedcount'+(est==="atendida"?" complete":"")+'">'+servN+'/'+pedido.items.length+' servidos</div>';
+      }
+      if(S.organize){
+        body += '<div class="editrow">'+
+          '<span class="editbtn" data-action="move-mesa" data-dir="-1" data-id="'+m.id+'">&#9650;</span>'+
+          '<span class="editbtn" data-action="move-mesa" data-dir="1" data-id="'+m.id+'">&#9660;</span>'+
+          '<span class="editbtn" data-action="edit-mesa" data-id="'+m.id+'">&#9998;</span>'+
+          '<span class="editbtn" data-action="delete-mesa" data-id="'+m.id+'">&#10005;</span>'+
+          '</div>';
+      }
+      body += '</div>';
+    });
+    if(ambiente){
+      body += '<div class="tile dashed" data-action="add-mesa" data-ambiente-id="'+ambiente.id+'">+ Agregar<br>mesa</div>';
+    }
+    body += '</div>';
+    if(mesas.length===0 && ambiente){
+      body += '<div class="empty" style="margin-top:12px;"><div class="icon">&#127869;</div><h3>Sin mesas todavía</h3>'+
+        '<p>Agrega la primera mesa de &ldquo;'+escapeHtml(ambiente.nombre)+'&rdquo;.</p>'+
+        '<button class="btn primary" data-action="add-mesa" data-ambiente-id="'+ambiente.id+'">Agregar mesa</button></div>';
+    }
+  }
+
+  var actions = '<button class="iconbtn" data-action="toggle-tema" title="'+(S.tema==="dark"?"Modo día":"Modo noche")+'">'+(S.tema==="dark"?"&#9728;":"&#127769;")+'</button>'+
+    '<button class="iconbtn" data-action="go-historial" title="Historial de mesas atendidas">&#128337;</button>'+
+    '<button class="iconbtn" data-action="go-carta" title="Gestionar carta">&#128214;</button>'+
+    '<button class="pillbtn'+(S.organize?" on":"")+'" data-action="toggle-organize">'+(S.organize?"Listo":"Organizar")+'</button>';
+
+  var html = '<div class="appbar">'+
+    '<div class="titles"><h1>Comanda</h1><div class="sub">Cevichería &middot; mozos</div></div>'+
+    '<div class="appbar-actions">'+actions+'</div>'+
+    '</div>';
+  if(!S.ready) html += '<div class="loadingnote">Cargando datos'+(S.dbMode==="local"?" (modo local)":"")+'&hellip;</div>';
+  else if(S.dbMode==="local") html += '<div class="loadingnote">Modo local: los cambios se guardan solo en este dispositivo.</div>';
+  html += '<div class="chiprow">'+chips+'</div>';
+  html += '<div class="page-body">'+body+'</div>';
+  return html;
+}
+
+/* ============================== RENDER: MESA ============================== */
+
+function renderMesaScreen(params){
+  var mesa = getMesa(params.mesaId);
+  if(!mesa){
+    goHome();
+    return "";
+  }
+  var ambiente = getAmbiente(mesa.ambienteId);
+  var pedido = activePedidoForMesa(mesa.id);
+  var est = mesaEstado(mesa.id);
+
+  var body = "";
+  if(!pedido || (pedido.items||[]).length===0){
+    body += '<div class="empty"><div class="icon">&#127860;</div><h3>Mesa '+escapeHtml(mesa.numero)+' libre</h3>'+
+      '<p>Toma el pedido de esta mesa.</p>'+
+      '<button class="btn primary" data-action="go-categorias" data-mesa-id="'+mesa.id+'">Realizar pedido</button></div>';
+  } else {
+    var estPillTxt = est==="atendida" ? "&#10003; Mesa atendida &mdash; todo servido" : (est==="cerrado"?"Pedido cerrado":"Pedido abierto");
+    body += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">'+
+      '<span class="status-pill '+est+'"><span class="dot"></span>'+estPillTxt+'</span>'+
+      '</div>';
+    var servidosN = pedido.items.filter(function(it){return it.servido;}).length;
+    body += '<div class="servedcount'+(est==="atendida"?" complete":"")+'">'+servidosN+' de '+pedido.items.length+' platos servidos</div>';
+    var itemsOrdenados = pedido.items.slice().sort(function(a,b){
+      var byName = (a.nombre||"").localeCompare(b.nombre||"");
+      if(byName!==0) return byName;
+      var byPres = (a.presentacion||"").localeCompare(b.presentacion||"");
+      if(byPres!==0) return byPres;
+      return (a.detalle||"").localeCompare(b.detalle||"");
+    });
+    itemsOrdenados.forEach(function(it){
+      body += '<div class="itemcard'+(it.servido?" served":"")+'">'+
+        '<div class="row1"><div class="name">'+it.cantidad+' &times; '+escapeHtml(it.nombre)+(it.presentacion==="Fuente"?" (Fuente)":"")+'</div>'+
+        '<div class="price">'+money(it.subtotal)+'</div></div>';
+      if(it.detalle) body += '<div class="detalle">'+escapeHtml(it.detalle)+'</div>';
+      body += '<div style="margin-top:9px;"><button class="servedpill '+(it.servido?"done":"pending")+'" data-action="toggle-item-servido" data-mesa-id="'+mesa.id+'" data-item-id="'+it.id+'">'+
+        (it.servido?"&#10003; Servido":"Pendiente &middot; marcar servido")+'</button></div>';
+      body += '<div class="row2">'+
+        '<div class="qtystepper">'+
+          '<button data-action="qty-item" data-mesa-id="'+mesa.id+'" data-item-id="'+it.id+'" data-delta="-1">&minus;</button>'+
+          '<span class="n">'+it.cantidad+'</span>'+
+          '<button data-action="qty-item" data-mesa-id="'+mesa.id+'" data-item-id="'+it.id+'" data-delta="1">+</button>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;align-items:center;">'+
+          '<button class="edit-link" data-action="edit-item" data-mesa-id="'+mesa.id+'" data-item-id="'+it.id+'">Editar</button>'+
+          '<button class="iconbtn small" data-action="delete-item" data-mesa-id="'+mesa.id+'" data-item-id="'+it.id+'" title="Quitar">&#10005;</button>'+
+        '</div>'+
+      '</div></div>';
+    });
+    body += '<button class="btn secondary block" data-action="liberar-mesa" data-mesa-id="'+mesa.id+'" style="margin-top:16px;">Liberar mesa (nueva atención)</button>';
+  }
+
+  var html = renderShell({
+    back:true,
+    title:"Mesa "+mesa.numero,
+    sub: ambiente ? ambiente.nombre : "",
+    body: body
+  });
+
+  if(pedido && (pedido.items||[]).length>0){
+    html += '<div class="totalbar"><div class="totalbar-inner">'+
+      '<div class="toprow"><span class="tot-label">Total</span><span class="tot-value">'+money(itemsTotal(pedido.items))+'</span></div>'+
+      '<div class="btnrow">'+
+        '<button class="btn secondary" data-action="toggle-estado-pedido" data-mesa-id="'+mesa.id+'">'+(pedido.estado==="cerrado"?"Reabrir":"Cerrar pedido")+'</button>'+
+        '<button class="btn primary" data-action="go-categorias" data-mesa-id="'+mesa.id+'">Agregar productos</button>'+
+      '</div></div></div>';
+  }
+  return html;
+}
+
+/* ============================== RENDER: CATEGORIAS ============================== */
+
+function renderCategoriasScreen(params){
+  var mesa = getMesa(params.mesaId);
+  if(!mesa){ goHome(); return ""; }
+  var body = '<div class="grid cats">';
+  CATEGORIAS.forEach(function(c){
+    var count = productosDeCategoria(c.id).length;
+    body += '<div class="catcard" data-action="open-categoria" data-mesa-id="'+mesa.id+'" data-categoria-id="'+c.id+'">'+
+      '<div class="badge" style="background:'+catColor(c.id)+'">'+catMono(c.n)+'</div>'+
+      '<div><div class="name">'+escapeHtml(c.n)+'</div>'+
+      (count===0?'<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">Sin platos aún</div>':'')+
+      '</div></div>';
+  });
+  body += '</div>';
+  return renderShell({back:true, title:"Elegir categoría", sub:"Mesa "+mesa.numero, body:body});
+}
+
+/* ============================== RENDER: PRODUCTOS ============================== */
+
+function renderProductosScreen(params){
+  var mesa = getMesa(params.mesaId);
+  var cat = CAT_BY_ID[params.categoriaId];
+  if(!mesa || !cat){ goHome(); return ""; }
+  var productos = productosDeCategoria(cat.id);
+  var body = "";
+  if(CATEGORIA_NOTAS[cat.id]){
+    body += '<div style="font-size:12.5px;color:var(--text-muted);background:var(--surface-2);border-radius:12px;padding:10px 13px;margin-bottom:14px;line-height:1.4;">'+escapeHtml(CATEGORIA_NOTAS[cat.id])+'</div>';
+  }
+  if(productos.length===0){
+    body += '<div class="empty"><div class="icon">&#127860;</div><h3>Sin platos en '+escapeHtml(cat.n)+'</h3>'+
+      '<p>Agrega el primer plato de esta categoría desde la carta.</p>'+
+      '<button class="btn primary" data-action="carta-add-producto" data-categoria-id="'+cat.id+'">Agregar plato</button></div>';
+  } else {
+    productos.forEach(function(p){
+      body += '<div class="prodcard" data-action="open-producto" data-mesa-id="'+mesa.id+'" data-producto-id="'+p.id+'">'+
+        '<div class="name">'+escapeHtml(p.nombre)+'</div>';
+      if(p.descripcion) body += '<div class="desc">'+escapeHtml(p.descripcion)+'</div>';
+      body += '<div class="prices"><div class="price"><span class="lbl">Personal</span>'+money(p.precioPersonal)+'</div>';
+      if(p.precioFuente) body += '<div class="price"><span class="lbl">Fuente</span>'+money(p.precioFuente)+'</div>';
+      body += '</div></div>';
+    });
+  }
+  return renderShell({back:true, title:cat.n, sub:"Mesa "+mesa.numero, body:body});
+}
+
+/* ============================== RENDER: CARTA ADMIN ============================== */
+
+function renderCartaAdmin(){
+  var body = "";
+  CATEGORIAS.forEach(function(c){
+    var productos = productosDeCategoria(c.id);
+    var open = !!S.cartaOpenSections[c.id];
+    body += '<div class="catsection">';
+    body += '<div class="chead" data-action="carta-toggle-section" data-categoria-id="'+c.id+'">'+
+      '<div class="badge" style="background:'+catColor(c.id)+';width:32px;height:32px;font-size:12px;">'+catMono(c.n)+'</div>'+
+      '<div style="font-weight:700;font-size:14px;">'+escapeHtml(c.n)+'</div>'+
+      '<div class="count">'+productos.length+'</div>'+
+      '<div style="font-size:12px;color:var(--text-muted);">'+(open?"&#9650;":"&#9660;")+'</div>'+
+      '</div>';
+    if(open){
+      body += '<div class="cbody">';
+      productos.forEach(function(p, idx){
+        body += '<div class="prodrow"><div class="info"><div class="pname">'+escapeHtml(p.nombre)+'</div>';
+        if(p.descripcion) body += '<div class="pdesc">'+escapeHtml(p.descripcion)+'</div>';
+        body += '<div class="pprice">Personal '+money(p.precioPersonal)+(p.precioFuente?" &middot; Fuente "+money(p.precioFuente):"")+'</div></div>';
+        body += '<div class="actions">';
+        if(S.organizeCarta){
+          body += '<button class="editbtn" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);" data-action="move-producto" data-dir="-1" data-id="'+p.id+'"'+(idx===0?' disabled':'')+'>&#9650;</button>'+
+            '<button class="editbtn" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);" data-action="move-producto" data-dir="1" data-id="'+p.id+'"'+(idx===productos.length-1?' disabled':'')+'>&#9660;</button>';
+        } else {
+          body += '<button class="editbtn" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);" data-action="carta-edit-producto" data-id="'+p.id+'">&#9998;</button>'+
+            '<button class="editbtn" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);" data-action="carta-delete-producto" data-id="'+p.id+'">&#10005;</button>';
+        }
+        body += '</div></div>';
+      });
+      body += '<button class="btn secondary sm block" style="margin-top:10px;" data-action="carta-add-producto" data-categoria-id="'+c.id+'">+ Agregar plato</button>';
+      body += '</div>';
+    }
+    body += '</div>';
+  });
+  var cartaActions = '<button class="pillbtn'+(S.organizeCarta?" on":"")+'" data-action="toggle-organize-carta">'+(S.organizeCarta?"Listo":"Ordenar platos")+'</button>';
+  return renderShell({back:true, title:"Gestionar carta", sub: S.organizeCarta ? "Usa las flechas para reordenar" : (CATEGORIAS.length+" categorías fijas"), actionsHtml:cartaActions, body:body});
+}
+
+/* ============================== RENDER: HISTORIAL ============================== */
+
+function renderHistorialScreen(){
+  var list = historialOrdenado();
+  var totalVendido = 0;
+  list.forEach(function(p){ totalVendido += itemsTotal(p.items); });
+
+  var body = "";
+  body += '<div style="display:flex;gap:10px;margin-bottom:14px;">'+
+    '<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;box-shadow:var(--shadow);">'+
+      '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;">Mesas atendidas</div>'+
+      '<div style="font-family:\'Sora\',sans-serif;font-size:26px;font-weight:800;margin-top:4px;">'+list.length+'</div>'+
+    '</div>'+
+    '<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;box-shadow:var(--shadow);">'+
+      '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;">Total vendido</div>'+
+      '<div style="font-family:\'Sora\',sans-serif;font-size:26px;font-weight:800;margin-top:4px;">'+money(totalVendido)+'</div>'+
+    '</div>'+
+  '</div>';
+  body += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.4;">Cada mesa liberada queda aquí 12 horas y luego se borra sola. También puedes eliminar un registro o vaciar todo el historial cuando quieras.</div>';
+
+  if(list.length===0){
+    body += '<div class="empty"><div class="icon">&#128203;</div><h3>Sin historial todavía</h3><p>Cuando liberes una mesa, quedará registrada aquí por 12 horas.</p></div>';
+  } else {
+    body += '<button class="btn danger sm block" style="margin-bottom:14px;" data-action="historial-clear-all">Vaciar historial</button>';
+    list.forEach(function(p){
+      var mesa = getMesa(p.mesaId);
+      var ambiente = mesa ? getAmbiente(mesa.ambienteId) : null;
+      var when = p.archivadoEn || p.actualizadoEn;
+      var whenTxt = when ? formatFechaHora(when) : "";
+      body += '<div class="itemcard" style="margin-bottom:14px;">';
+      body += '<div class="row1"><div class="name">Mesa '+(mesa?escapeHtml(mesa.numero):"?")+(ambiente?' &middot; '+escapeHtml(ambiente.nombre):"")+'</div>'+
+        '<button class="iconbtn small" data-action="historial-delete-item" data-id="'+p.id+'" title="Eliminar registro">&#10005;</button></div>';
+      if(whenTxt) body += '<div class="detalle" style="margin-bottom:8px;">'+escapeHtml(whenTxt)+'</div>';
+      (p.items||[]).forEach(function(it){
+        body += '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--border);">'+
+          '<div style="font-size:13px;flex:1;min-width:0;">'+it.cantidad+' &times; '+escapeHtml(it.nombre)+(it.presentacion==="Fuente"?" (Fuente)":"")+
+          (it.detalle?'<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">'+escapeHtml(it.detalle)+'</div>':'')+
+          '</div><div style="font-size:13px;font-weight:700;white-space:nowrap;">'+money(it.subtotal)+'</div></div>';
+      });
+      body += '<div class="row1" style="margin-top:8px;border-top:1.5px solid var(--border);padding-top:8px;"><div class="name">Total</div><div class="price">'+money(itemsTotal(p.items))+'</div></div>';
+      body += '</div>';
+    });
+  }
+  return renderShell({back:true, title:"Historial", sub:"Mesas atendidas · últimas 12 horas", body:body});
+}
+
+/* ============================== MAIN RENDER ============================== */
+
+function render(){
+  var app = document.getElementById("app");
+  var scr = current();
+  var html = "";
+  if(scr.screen==="home") html = renderHome();
+  else if(scr.screen==="mesa") html = renderMesaScreen(scr.params);
+  else if(scr.screen==="categorias") html = renderCategoriasScreen(scr.params);
+  else if(scr.screen==="productos") html = renderProductosScreen(scr.params);
+  else if(scr.screen==="carta") html = renderCartaAdmin();
+  else if(scr.screen==="historial") html = renderHistorialScreen();
+  else html = renderHome();
+  app.innerHTML = html;
+  renderModal();
+  renderToast();
+}
+
+/* ============================== MODALS ============================== */
+
+function openModal(type, data){
+  S.modal = Object.assign({type:type}, data||{});
+  try{ history.pushState({layer:"modal"}, ""); }catch(e){}
+  renderModal();
+}
+function closeModal(){
+  if(!S.modal) return;
+  try{ history.back(); }catch(e){ S.modal=null; renderModal(); }
+}
+function openConfirm(opts){
+  S.confirm = opts;
+  try{ history.pushState({layer:"confirm"}, ""); }catch(e){}
+  renderModal();
+}
+function closeConfirm(){
+  if(!S.confirm) return;
+  try{ history.back(); }catch(e){ S.confirm=null; renderModal(); }
+}
+
+function renderModal(){
+  var layer = document.getElementById("modal-layer");
+  var html = "";
+  if(S.modal){
+    html += renderModalContent(S.modal);
+  }
+  if(S.confirm){
+    html += '<div class="overlay center" data-action="confirm-backdrop"><div class="dialog">'+
+      '<h3>'+escapeHtml(S.confirm.title)+'</h3>'+
+      '<p>'+escapeHtml(S.confirm.message)+'</p>'+
+      '<div class="btnrow">'+
+        '<button class="btn secondary" data-action="confirm-no">Cancelar</button>'+
+        '<button class="btn '+(S.confirm.danger?"danger":"primary")+'" data-action="confirm-yes">'+escapeHtml(S.confirm.confirmLabel||"Confirmar")+'</button>'+
+      '</div></div></div>';
+  }
+  layer.innerHTML = html;
+}
+
+function renderModalContent(m){
+  if(m.type==="ambiente-form") return renderAmbienteForm(m);
+  if(m.type==="mesa-form") return renderMesaForm(m);
+  if(m.type==="producto-form") return renderProductoForm(m);
+  if(m.type==="producto-config") return renderProductoConfig(m);
+  return "";
+}
+
+function sheetWrap(headerHtml, bodyHtml, footerHtml){
+  return '<div class="overlay" data-action="overlay-backdrop"><div class="sheet" data-stop="1">'+
+    '<div class="sheet-handle"></div>'+
+    headerHtml+
+    '<div class="sheet-body">'+bodyHtml+'</div>'+
+    (footerHtml ? '<div class="sheet-footer">'+footerHtml+'</div>' : '')+
+    '</div></div>';
+}
+
+/* ---- ambiente form ---- */
+function renderAmbienteForm(m){
+  var editing = !!m.id;
+  var header = '<div class="sheet-header"><div><h2>'+(editing?"Editar ambiente":"Nuevo ambiente")+'</h2></div>'+
+    '<button class="iconbtn" style="background:var(--surface-2);color:var(--text);" data-action="close-modal">&#10005;</button></div>';
+  var body = '<div class="field"><label>Nombre</label>'+
+    '<input type="text" id="f-ambiente-nombre" value="'+escapeHtml(m.nombre||"")+'" placeholder="Ej. Salón, Terraza, Segundo piso" autofocus></div>';
+  var footer = (editing ? '<button class="btn danger" data-action="ambiente-form-delete" data-id="'+m.id+'">Eliminar</button>' : '')+
+    '<button class="btn primary" data-action="ambiente-form-save" data-id="'+(m.id||"")+'">Guardar</button>';
+  return sheetWrap(header, body, footer);
+}
+
+/* ---- mesa form ---- */
+function renderMesaForm(m){
+  var editing = !!m.id;
+  var header = '<div class="sheet-header"><div><h2>'+(editing?"Editar mesa":"Nueva mesa")+'</h2></div>'+
+    '<button class="iconbtn" style="background:var(--surface-2);color:var(--text);" data-action="close-modal">&#10005;</button></div>';
+  var body = '<div class="field"><label>Número de mesa</label>'+
+    '<input type="text" inputmode="numeric" id="f-mesa-numero" value="'+escapeHtml(m.numero||"")+'" placeholder="Ej. 42" autofocus></div>';
+  var footer = (editing ? '<button class="btn danger" data-action="mesa-form-delete" data-id="'+m.id+'">Eliminar</button>' : '')+
+    '<button class="btn primary" data-action="mesa-form-save" data-id="'+(m.id||"")+'" data-ambiente-id="'+m.ambienteId+'">Guardar</button>';
+  return sheetWrap(header, body, footer);
+}
+
+/* ---- producto form (carta admin) ---- */
+function renderProductoForm(m){
+  var editing = !!m.id;
+  var draft = m.draft;
+  var header = '<div class="sheet-header"><div><h2>'+(editing?"Editar plato":"Nuevo plato")+'</h2>'+
+    '<div class="desc">'+escapeHtml(CAT_BY_ID[draft.categoriaId] ? CAT_BY_ID[draft.categoriaId].n : "")+'</div></div>'+
+    '<button class="iconbtn" style="background:var(--surface-2);color:var(--text);" data-action="close-modal">&#10005;</button></div>';
+
+  var body = "";
+  body += '<div class="field"><label>Categoría</label><select id="f-prod-categoria" data-bind="categoriaId">';
+  CATEGORIAS.forEach(function(c){
+    body += '<option value="'+c.id+'"'+(c.id===draft.categoriaId?" selected":"")+'>'+escapeHtml(c.n)+'</option>';
+  });
+  body += '</select></div>';
+  body += '<div class="field"><label>Nombre del plato</label><input type="text" data-bind="nombre" value="'+escapeHtml(draft.nombre||"")+'" placeholder="Ej. Ceviche Mixto"></div>';
+  body += '<div class="field"><label>Descripción</label><textarea data-bind="descripcion" placeholder="Ingredientes o detalle breve">'+escapeHtml(draft.descripcion||"")+'</textarea></div>';
+  body += '<div class="field-row"><div class="field"><label>Precio personal (S/)</label><input type="number" min="0" step="0.5" data-bind="precioPersonal" value="'+(draft.precioPersonal!=null?draft.precioPersonal:"")+'"></div></div>';
+  body += '<div class="checkrow"><input type="checkbox" id="f-prod-fuente-check" data-action="producto-form-toggle-fuente" '+(draft.tieneFuente?"checked":"")+'><label for="f-prod-fuente-check">Ofrece presentación &ldquo;Fuente&rdquo;</label></div>';
+  if(draft.tieneFuente){
+    body += '<div class="field"><label>Precio fuente (S/)</label><input type="number" min="0" step="0.5" data-bind="precioFuente" value="'+(draft.precioFuente!=null?draft.precioFuente:"")+'"></div>';
+  }
+
+  body += '<div class="section-title" style="margin-top:6px;">Preferencias configurables</div>';
+  (draft.preferencias||[]).forEach(function(g, idx){
+    body += '<div class="prefrow"><div class="top"><span>Preferencia '+(idx+1)+'</span>'+
+      '<button class="linkbtn danger" data-action="producto-form-remove-pref-row" data-index="'+idx+'">Quitar</button></div>';
+    body += '<div class="field" style="margin-bottom:8px;"><label>Nombre</label><input type="text" data-bind="pref-nombre" data-index="'+idx+'" value="'+escapeHtml(g.nombre||"")+'" placeholder="Ej. Presentación, Temperatura"></div>';
+    body += '<div class="field" style="margin-bottom:8px;"><label>Tipo</label><select data-bind="pref-tipo" data-index="'+idx+'">'+
+      '<option value="single"'+(g.tipo==="single"?" selected":"")+'>Elegir una opción</option>'+
+      '<option value="multi"'+(g.tipo==="multi"?" selected":"")+'>Elegir varias opciones</option>'+
+      '</select></div>';
+    body += '<div class="field" style="margin-bottom:0;"><label>Opciones (separadas por coma)</label><input type="text" data-bind="pref-opciones" data-index="'+idx+'" value="'+escapeHtml((g.opciones||[]).join(", "))+'" placeholder="Ej. Normal, Helada"></div>';
+    body += '</div>';
+  });
+  body += '<button class="linkbtn" data-action="producto-form-add-pref-row">+ Agregar preferencia</button>';
+
+  body += '<div class="field" style="margin-top:16px;"><label>Observaciones sugeridas (separadas por coma)</label>'+
+    '<input type="text" data-bind="observacionesSugeridas" value="'+escapeHtml((draft.observacionesSugeridas||[]).join(", "))+'" placeholder="Ej. Sin cebolla, Poco picante"></div>';
+
+  var footer = (editing ? '<button class="btn danger" data-action="carta-delete-producto" data-id="'+m.id+'">Eliminar</button>' : '')+
+    '<button class="btn primary" data-action="producto-form-save" data-id="'+(m.id||"")+'">Guardar</button>';
+  return sheetWrap(header, body, footer);
+}
+
+/* ---- producto config (agregar/editar item de pedido) ---- */
+function renderProductoConfig(m){
+  var producto = getProducto(m.productoId);
+  if(!producto) return "";
+  var draft = m.draft;
+  var precioUnit = (draft.presentacion==="Fuente" && producto.precioFuente) ? producto.precioFuente : producto.precioPersonal;
+  var subtotal = precioUnit * draft.cantidad;
+
+  var header = '<div class="sheet-header"><div><h2>'+escapeHtml(producto.nombre)+'</h2>'+
+    (producto.descripcion ? '<div class="desc">'+escapeHtml(producto.descripcion)+'</div>' : '')+
+    '</div><button class="iconbtn" style="background:var(--surface-2);color:var(--text);" data-action="close-modal">&#10005;</button></div>';
+
+  var body = "";
+  body += '<div class="pref-group"><div class="glabel">Cantidad</div><div class="stepper-lg">'+
+    '<button data-action="modal-qty" data-delta="-1">&minus;</button>'+
+    '<span class="n">'+draft.cantidad+'</span>'+
+    '<button data-action="modal-qty" data-delta="1">+</button>'+
+    '</div></div>';
+
+  if(producto.precioFuente){
+    body += '<div class="pref-group"><div class="glabel">Presentación</div><div class="chipselect">'+
+      '<div class="optchip'+(draft.presentacion==="Personal"?" sel":"")+'" data-action="modal-select-presentacion" data-value="Personal">Personal &middot; '+money(producto.precioPersonal)+'</div>'+
+      '<div class="optchip'+(draft.presentacion==="Fuente"?" sel":"")+'" data-action="modal-select-presentacion" data-value="Fuente">Fuente &middot; '+money(producto.precioFuente)+'</div>'+
+      '</div></div>';
+  }
+
+  (producto.preferencias||[]).forEach(function(g){
+    body += '<div class="pref-group"><div class="glabel">'+escapeHtml(g.nombre)+'</div><div class="chipselect">';
+    (g.opciones||[]).forEach(function(op){
+      var sel = g.tipo==="multi" ? (draft.prefs[g.id]||[]).indexOf(op)>=0 : draft.prefs[g.id]===op;
+      body += '<div class="optchip'+(sel?" sel":"")+'" data-action="modal-select-pref" data-group-id="'+g.id+'" data-value="'+escapeHtml(op)+'" data-multi="'+(g.tipo==="multi"?"1":"0")+'">'+escapeHtml(op)+'</div>';
+    });
+    body += '</div></div>';
+  });
+
+  var obsList = (producto.observacionesSugeridas && producto.observacionesSugeridas.length) ? producto.observacionesSugeridas : OBS_GENERICAS;
+  body += '<div class="pref-group"><div class="glabel">Observaciones</div><div class="chipselect">';
+  obsList.forEach(function(op){
+    var sel = (draft.obsChips||[]).indexOf(op)>=0;
+    body += '<div class="optchip obs'+(sel?" sel":"")+'" data-action="modal-toggle-obs-chip" data-value="'+escapeHtml(op)+'">'+escapeHtml(op)+'</div>';
+  });
+  body += '</div></div>';
+
+  body += '<div class="field"><label>Otras observaciones</label>'+
+    '<textarea id="f-modal-obs-texto" data-bind="obsTexto" placeholder="Escribe una indicación adicional&hellip;">'+escapeHtml(draft.obsTexto||"")+'</textarea></div>';
+
+  var footer = "";
+  if(m.editingItemId){
+    footer += '<button class="btn danger" data-action="modal-delete-item">Quitar</button>';
+  }
+  footer += '<button class="btn primary" data-action="modal-save">'+(m.editingItemId?"Guardar cambios":"Agregar al pedido")+' &middot; '+money(subtotal)+'</button>';
+
+  return sheetWrap(header, body, footer);
+}
+
+/* ============================== TOAST ============================== */
+function renderToast(){
+  var layer = document.getElementById("toast-layer");
+  layer.innerHTML = S.toast ? '<div class="toast">'+escapeHtml(S.toast.msg)+'</div>' : "";
+}
+
+/* ============================== BUILD DETALLE ============================== */
+
+function buildDetalle(producto, draft){
+  var parts = [];
+  (producto.preferencias||[]).forEach(function(g){
+    var val = draft.prefs[g.id];
+    if(g.tipo==="multi"){
+      if(val && val.length) parts.push(val.join(", "));
+    } else {
+      if(val && g.opciones && val !== g.opciones[0]) parts.push(val);
+    }
+  });
+  if(draft.obsChips && draft.obsChips.length) parts.push(draft.obsChips.join(", "));
+  if(draft.obsTexto && draft.obsTexto.trim()) parts.push(draft.obsTexto.trim());
+  return parts.join(" · ");
+}
+
+function defaultPrefs(producto){
+  var prefs = {};
+  (producto.preferencias||[]).forEach(function(g){
+    if(g.tipo==="multi") prefs[g.id]=[];
+    else prefs[g.id] = (g.opciones && g.opciones[0]) || "";
+  });
+  return prefs;
+}
+
+/* ============================== EVENT HANDLING ============================== */
+
+function fieldValue(id){
+  var el = document.getElementById(id);
+  return el ? el.value : "";
+}
+
+document.addEventListener("click", function(ev){
+  var el = ev.target.closest("[data-action]");
+  if(!el) return;
+  var action = el.getAttribute("data-action");
+
+  if(action==="overlay-backdrop"){ if(ev.target===el){ closeModal(); } return; }
+  if(action==="confirm-backdrop"){ if(ev.target===el){ closeConfirm(); } return; }
+  if(action==="noop"){ return; }
+
+  switch(action){
+    case "back": goBack(); return;
+    case "select-ambiente": S.selectedAmbienteId = el.getAttribute("data-id"); render(); return;
+    case "toggle-organize": S.organize = !S.organize; render(); return;
+    case "toggle-tema": toggleTema(); render(); return;
+    case "go-carta": push("carta"); return;
+    case "go-historial": push("historial"); return;
+    case "historial-delete-item": {
+      var hid = el.getAttribute("data-id");
+      openConfirm({
+        title:"¿Eliminar este registro?",
+        message:"Se quitará del historial de forma permanente.",
+        confirmLabel:"Eliminar", danger:true,
+        run:function(){ DB.collection("pedidos").doc(hid).delete(); showToast("Registro eliminado"); }
+      });
+      return;
+    }
+    case "historial-clear-all": {
+      openConfirm({
+        title:"¿Vaciar todo el historial?",
+        message:"Se eliminarán todos los registros de mesas atendidas.",
+        confirmLabel:"Vaciar", danger:true,
+        run:function(){
+          historialOrdenado().forEach(function(p){ DB.collection("pedidos").doc(p.id).delete(); });
+          showToast("Historial vaciado");
+        }
+      });
+      return;
+    }
+
+    case "add-ambiente": openModal("ambiente-form", {}); return;
+    case "edit-ambiente": {
+      var a = getAmbiente(el.getAttribute("data-id"));
+      if(a) openModal("ambiente-form", {id:a.id, nombre:a.nombre});
+      return;
+    }
+    case "delete-ambiente": {
+      var aid = el.getAttribute("data-id");
+      var a2 = getAmbiente(aid);
+      var mesasN = mesasDeAmbiente(aid).length;
+      openConfirm({
+        title:"¿Eliminar ambiente?",
+        message: a2 ? ("Se eliminará \""+a2.nombre+"\""+(mesasN?" junto con sus "+mesasN+" mesas y pedidos asociados.":".")) : "",
+        confirmLabel:"Eliminar", danger:true,
+        run: function(){
+          deleteAmbienteCascade(aid).then(function(){
+            S.selectedAmbienteId=null;
+            showToast("Ambiente eliminado");
+          });
+        }
+      });
+      return;
+    }
+    case "move-ambiente": moveAmbiente(el.getAttribute("data-id"), parseInt(el.getAttribute("data-dir"),10)); return;
+
+    case "add-mesa": openModal("mesa-form", {ambienteId: el.getAttribute("data-ambiente-id")}); return;
+    case "edit-mesa": {
+      var mm = getMesa(el.getAttribute("data-id"));
+      if(mm) openModal("mesa-form", {id:mm.id, ambienteId:mm.ambienteId, numero:mm.numero});
+      return;
+    }
+    case "delete-mesa": {
+      var mid = el.getAttribute("data-id");
+      var mmesa = getMesa(mid);
+      openConfirm({
+        title:"¿Eliminar mesa?",
+        message: mmesa ? ("Se eliminará la mesa "+mmesa.numero+" y su historial de pedidos.") : "",
+        confirmLabel:"Eliminar", danger:true,
+        run: function(){ deleteMesaCascade(mid).then(function(){ showToast("Mesa eliminada"); }); }
+      });
+      return;
+    }
+    case "move-mesa": moveMesa(el.getAttribute("data-id"), parseInt(el.getAttribute("data-dir"),10)); return;
+    case "open-mesa": push("mesa", {mesaId: el.getAttribute("data-id")}); return;
+
+    case "go-categorias": push("categorias", {mesaId: el.getAttribute("data-mesa-id")}); return;
+    case "open-categoria": push("productos", {mesaId: el.getAttribute("data-mesa-id"), categoriaId: el.getAttribute("data-categoria-id")}); return;
+
+    case "open-producto": {
+      var pid = el.getAttribute("data-producto-id");
+      var mesaId = el.getAttribute("data-mesa-id");
+      var producto = getProducto(pid);
+      if(!producto) return;
+      openModal("producto-config", {
+        mesaId:mesaId, productoId:pid, editingItemId:null,
+        draft:{cantidad:1, presentacion:"Personal", prefs:defaultPrefs(producto), obsChips:[], obsTexto:""}
+      });
+      return;
+    }
+    case "edit-item": {
+      var mesaId2 = el.getAttribute("data-mesa-id");
+      var itemId = el.getAttribute("data-item-id");
+      var pedido2 = activePedidoForMesa(mesaId2);
+      if(!pedido2) return;
+      var item = pedido2.items.filter(function(it){return it.id===itemId;})[0];
+      if(!item) return;
+      openModal("producto-config", {
+        mesaId:mesaId2, productoId:item.productoId, editingItemId:itemId,
+        draft:{cantidad:item.cantidad, presentacion:item.presentacion||"Personal", prefs: item.prefs || {}, obsChips: item.obsChips||[], obsTexto:item.obsTexto||""}
+      });
+      return;
+    }
+    case "qty-item": updateItemQty(el.getAttribute("data-mesa-id"), el.getAttribute("data-item-id"), parseInt(el.getAttribute("data-delta"),10)); return;
+    case "toggle-item-servido": toggleItemServido(el.getAttribute("data-mesa-id"), el.getAttribute("data-item-id")); return;
+    case "delete-item": {
+      var dmesa = el.getAttribute("data-mesa-id"), ditem = el.getAttribute("data-item-id");
+      openConfirm({
+        title:"¿Quitar producto?", message:"Se quitará del pedido de la mesa.",
+        confirmLabel:"Quitar", danger:true,
+        run:function(){ removeItem(dmesa, ditem); showToast("Producto quitado"); }
+      });
+      return;
+    }
+    case "toggle-estado-pedido": toggleEstadoPedido(el.getAttribute("data-mesa-id")); return;
+    case "liberar-mesa": {
+      var lmesa = el.getAttribute("data-mesa-id");
+      openConfirm({
+        title:"¿Liberar mesa?",
+        message:"El pedido actual se archivará y la mesa quedará libre para una nueva atención.",
+        confirmLabel:"Liberar mesa", danger:true,
+        run:function(){ liberarMesa(lmesa); showToast("Mesa liberada"); }
+      });
+      return;
+    }
+
+    case "close-modal": closeModal(); return;
+    case "confirm-yes": {
+      var run = S.confirm && S.confirm.run;
+      closeConfirm();
+      if(run) run();
+      return;
+    }
+    case "confirm-no": closeConfirm(); return;
+
+    case "ambiente-form-save": {
+      var name = fieldValue("f-ambiente-nombre").trim();
+      if(!name){ showToast("Escribe un nombre"); return; }
+      var id0 = el.getAttribute("data-id");
+      if(id0){ updateAmbiente(id0, {nombre:name}).then(function(){ showToast("Ambiente actualizado"); }); }
+      else { addAmbiente(name).then(function(){ showToast("Ambiente creado"); }); }
+      closeModal();
+      return;
+    }
+    case "ambiente-form-delete": {
+      var aid3 = el.getAttribute("data-id");
+      closeModal();
+      var a3 = getAmbiente(aid3);
+      var mn = mesasDeAmbiente(aid3).length;
+      openConfirm({
+        title:"¿Eliminar ambiente?",
+        message: a3 ? ("Se eliminará \""+a3.nombre+"\""+(mn?" junto con sus "+mn+" mesas.":".")) : "",
+        confirmLabel:"Eliminar", danger:true,
+        run:function(){ deleteAmbienteCascade(aid3).then(function(){ S.selectedAmbienteId=null; showToast("Ambiente eliminado"); }); }
+      });
+      return;
+    }
+
+    case "mesa-form-save": {
+      var numero = fieldValue("f-mesa-numero").trim();
+      if(!numero){ showToast("Escribe el número de mesa"); return; }
+      var id1 = el.getAttribute("data-id");
+      var amb1 = el.getAttribute("data-ambiente-id");
+      if(id1){ updateMesa(id1, {numero:numero}).then(function(){ showToast("Mesa actualizada"); }); }
+      else { addMesa(amb1, numero).then(function(){ showToast("Mesa creada"); }); }
+      closeModal();
+      return;
+    }
+    case "mesa-form-delete": {
+      var mid2 = el.getAttribute("data-id");
+      closeModal();
+      var mmesa2 = getMesa(mid2);
+      openConfirm({
+        title:"¿Eliminar mesa?",
+        message: mmesa2 ? ("Se eliminará la mesa "+mmesa2.numero+".") : "",
+        confirmLabel:"Eliminar", danger:true,
+        run:function(){ deleteMesaCascade(mid2).then(function(){ showToast("Mesa eliminada"); }); }
+      });
+      return;
+    }
+
+    case "carta-toggle-section": {
+      var cid = el.getAttribute("data-categoria-id");
+      S.cartaOpenSections[cid] = !S.cartaOpenSections[cid];
+      render();
+      return;
+    }
+    case "toggle-organize-carta": {
+      S.organizeCarta = !S.organizeCarta;
+      render();
+      return;
+    }
+    case "move-producto": {
+      moveProducto(el.getAttribute("data-id"), parseInt(el.getAttribute("data-dir"),10));
+      return;
+    }
+    case "carta-add-producto": {
+      var cid2 = el.getAttribute("data-categoria-id");
+      S.cartaOpenSections[cid2] = true;
+      openModal("producto-form", {draft:{categoriaId:cid2, preferencias:[], observacionesSugeridas:[]}});
+      return;
+    }
+    case "carta-edit-producto": {
+      var prid = el.getAttribute("data-id");
+      var prod = getProducto(prid);
+      if(!prod) return;
+      openModal("producto-form", {id:prod.id, draft:{
+        categoriaId:prod.categoriaId, nombre:prod.nombre, descripcion:prod.descripcion,
+        precioPersonal:prod.precioPersonal, tieneFuente: !!prod.precioFuente, precioFuente:prod.precioFuente,
+        preferencias: JSON.parse(JSON.stringify(prod.preferencias||[])),
+        observacionesSugeridas: (prod.observacionesSugeridas||[]).slice()
+      }});
+      return;
+    }
+    case "carta-delete-producto": {
+      var dprid = el.getAttribute("data-id");
+      closeModal();
+      openConfirm({
+        title:"¿Eliminar plato?", message:"Se quitará de la carta. Los pedidos ya realizados no se modifican.",
+        confirmLabel:"Eliminar", danger:true,
+        run:function(){ deleteProducto(dprid).then(function(){ showToast("Plato eliminado"); }); }
+      });
+      return;
+    }
+    case "producto-form-toggle-fuente": {
+      if(S.modal){ S.modal.draft.tieneFuente = !S.modal.draft.tieneFuente; renderModal(); }
+      return;
+    }
+    case "producto-form-add-pref-row": {
+      if(S.modal){
+        S.modal.draft.preferencias = S.modal.draft.preferencias||[];
+        S.modal.draft.preferencias.push({id:uid("pref"), nombre:"", tipo:"single", opciones:[]});
+        renderModal();
+      }
+      return;
+    }
+    case "producto-form-remove-pref-row": {
+      if(S.modal){
+        var idx = parseInt(el.getAttribute("data-index"),10);
+        S.modal.draft.preferencias.splice(idx,1);
+        renderModal();
+      }
+      return;
+    }
+    case "producto-form-save": {
+      if(!S.modal) return;
+      var d = S.modal.draft;
+      readProductoFormIntoDraft(d);
+      if(!d.nombre || !d.nombre.trim()){ showToast("Escribe el nombre del plato"); return; }
+      var payload = {
+        categoriaId: d.categoriaId,
+        nombre: d.nombre.trim(),
+        descripcion: (d.descripcion||"").trim(),
+        precioPersonal: Number(d.precioPersonal)||0,
+        precioFuente: d.tieneFuente ? (Number(d.precioFuente)||0) : null,
+        preferencias: (d.preferencias||[]).filter(function(g){return g.nombre && g.nombre.trim();}).map(function(g){
+          return {id:g.id, nombre:g.nombre.trim(), tipo:g.tipo, opciones:(g.opciones||[]).filter(function(o){return o.trim();})};
+        }),
+        observacionesSugeridas: d.observacionesSugeridas||[]
+      };
+      var editId = el.getAttribute("data-id");
+      if(editId){ updateProducto(editId, payload).then(function(){ showToast("Plato actualizado"); }); }
+      else { addProducto(payload).then(function(){ showToast("Plato agregado a la carta"); }); }
+      closeModal();
+      return;
+    }
+
+    case "modal-qty": {
+      if(S.modal){ var delta=parseInt(el.getAttribute("data-delta"),10); S.modal.draft.cantidad=Math.max(1,(S.modal.draft.cantidad||1)+delta); renderModal(); }
+      return;
+    }
+    case "modal-select-presentacion": {
+      if(S.modal){ S.modal.draft.presentacion = el.getAttribute("data-value"); renderModal(); }
+      return;
+    }
+    case "modal-select-pref": {
+      if(!S.modal) return;
+      var gid = el.getAttribute("data-group-id"), val = el.getAttribute("data-value"), multi = el.getAttribute("data-multi")==="1";
+      var prefs = S.modal.draft.prefs;
+      if(multi){
+        var arr = prefs[gid] || [];
+        var i = arr.indexOf(val);
+        if(i>=0) arr = arr.slice(0,i).concat(arr.slice(i+1)); else arr = arr.concat([val]);
+        prefs[gid]=arr;
+      } else {
+        prefs[gid]=val;
+      }
+      renderModal();
+      return;
+    }
+    case "modal-toggle-obs-chip": {
+      if(!S.modal) return;
+      var v = el.getAttribute("data-value");
+      var chips = S.modal.draft.obsChips||[];
+      var ci = chips.indexOf(v);
+      if(ci>=0) chips = chips.slice(0,ci).concat(chips.slice(ci+1)); else chips = chips.concat([v]);
+      S.modal.draft.obsChips = chips;
+      renderModal();
+      return;
+    }
+    case "modal-save": {
+      if(!S.modal) return;
+      var mp = S.modal;
+      var producto2 = getProducto(mp.productoId);
+      if(!producto2) return;
+      var draft2 = mp.draft;
+      var obsTextoEl = document.getElementById("f-modal-obs-texto");
+      if(obsTextoEl) draft2.obsTexto = obsTextoEl.value;
+      var precioUnit2 = (draft2.presentacion==="Fuente" && producto2.precioFuente) ? producto2.precioFuente : producto2.precioPersonal;
+      var prevServido = false;
+      if(mp.editingItemId){
+        var prevPedido = activePedidoForMesa(mp.mesaId);
+        var prevItem = prevPedido ? prevPedido.items.filter(function(x){return x.id===mp.editingItemId;})[0] : null;
+        prevServido = prevItem ? !!prevItem.servido : false;
+      }
+      var item = {
+        id: mp.editingItemId || uid("item"),
+        productoId: producto2.id,
+        categoriaId: producto2.categoriaId,
+        nombre: producto2.nombre,
+        cantidad: draft2.cantidad,
+        presentacion: producto2.precioFuente ? draft2.presentacion : null,
+        precioUnit: precioUnit2,
+        subtotal: precioUnit2*draft2.cantidad,
+        prefs: draft2.prefs,
+        obsChips: draft2.obsChips,
+        obsTexto: draft2.obsTexto,
+        detalle: buildDetalle(producto2, draft2),
+        servido: prevServido
+      };
+      saveItemToPedido(mp.mesaId, item, mp.editingItemId).then(function(){
+        showToast(mp.editingItemId ? "Producto actualizado" : "Agregado al pedido");
+      });
+      closeModal();
+      return;
+    }
+    case "modal-delete-item": {
+      if(!S.modal) return;
+      var mp2 = S.modal;
+      closeModal();
+      removeItem(mp2.mesaId, mp2.editingItemId);
+      showToast("Producto quitado");
+      return;
+    }
+  }
+});
+
+function readProductoFormIntoDraft(d){
+  var catEl = document.getElementById("f-prod-categoria");
+  if(catEl) d.categoriaId = catEl.value;
+  document.querySelectorAll('[data-bind="nombre"]').forEach(function(elx){ d.nombre = elx.value; });
+  document.querySelectorAll('[data-bind="descripcion"]').forEach(function(elx){ d.descripcion = elx.value; });
+  document.querySelectorAll('[data-bind="precioPersonal"]').forEach(function(elx){ d.precioPersonal = elx.value; });
+  document.querySelectorAll('[data-bind="precioFuente"]').forEach(function(elx){ d.precioFuente = elx.value; });
+  document.querySelectorAll('[data-bind="observacionesSugeridas"]').forEach(function(elx){
+    d.observacionesSugeridas = elx.value.split(",").map(function(s){return s.trim();}).filter(Boolean);
+  });
+  document.querySelectorAll('[data-bind="pref-nombre"]').forEach(function(elx){
+    var i = parseInt(elx.getAttribute("data-index"),10);
+    if(d.preferencias[i]) d.preferencias[i].nombre = elx.value;
+  });
+  document.querySelectorAll('[data-bind="pref-tipo"]').forEach(function(elx){
+    var i = parseInt(elx.getAttribute("data-index"),10);
+    if(d.preferencias[i]) d.preferencias[i].tipo = elx.value;
+  });
+  document.querySelectorAll('[data-bind="pref-opciones"]').forEach(function(elx){
+    var i = parseInt(elx.getAttribute("data-index"),10);
+    if(d.preferencias[i]) d.preferencias[i].opciones = elx.value.split(",").map(function(s){return s.trim();}).filter(Boolean);
+  });
+}
+
+/* Keep form fields synced into the modal draft on every keystroke/change, WITHOUT forcing a
+   re-render — this preserves focus/caret and also prevents values from being lost whenever a
+   button click (checkbox toggle, add/remove preference row, quantity, chip selection) later
+   triggers renderModal(), which rebuilds the sheet's HTML from the draft object. */
+function syncFieldToDraft(t){
+  if(!S.modal || !t || !t.getAttribute) return;
+  var bind = t.getAttribute("data-bind");
+  if(!bind) return;
+  var d = S.modal.draft;
+  if(!d) return;
+  if(bind==="obsTexto"){ d.obsTexto = t.value; return; }
+  if(bind==="categoriaId"){ d.categoriaId = t.value; return; }
+  if(bind==="nombre"){ d.nombre = t.value; return; }
+  if(bind==="descripcion"){ d.descripcion = t.value; return; }
+  if(bind==="precioPersonal"){ d.precioPersonal = t.value; return; }
+  if(bind==="precioFuente"){ d.precioFuente = t.value; return; }
+  if(bind==="observacionesSugeridas"){
+    d.observacionesSugeridas = t.value.split(",").map(function(s){return s.trim();}).filter(Boolean);
+    return;
+  }
+  var idxAttr = t.getAttribute("data-index");
+  if(idxAttr!==null && d.preferencias){
+    var i = parseInt(idxAttr,10);
+    if(!d.preferencias[i]) return;
+    if(bind==="pref-nombre") d.preferencias[i].nombre = t.value;
+    else if(bind==="pref-tipo") d.preferencias[i].tipo = t.value;
+    else if(bind==="pref-opciones") d.preferencias[i].opciones = t.value.split(",").map(function(s){return s.trim();}).filter(Boolean);
+  }
+}
+document.addEventListener("input", function(ev){ syncFieldToDraft(ev.target); });
+document.addEventListener("change", function(ev){ syncFieldToDraft(ev.target); });
+
+/* ============================== INIT ============================== */
+
+initTema();
+initStore();
+render();
+
+})();
+</script>

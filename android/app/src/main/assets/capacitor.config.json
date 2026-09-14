@@ -1,0 +1,11 @@
+{
+	"appId": "pe.comanda.cevicheria",
+	"appName": "Comanda",
+	"webDir": "www",
+	"server": {
+		"androidScheme": "https"
+	},
+	"android": {
+		"allowMixedContent": true
+	}
+}
