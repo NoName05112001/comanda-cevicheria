@@ -1,0 +1,4 @@
+firebase-admin>=6.5.0,<8
+pywinauto==0.6.8
+pywin32==306
+psutil>=5.9,<7

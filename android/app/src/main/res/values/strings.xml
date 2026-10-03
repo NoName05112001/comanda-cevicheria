@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Comanda</string>
+    <string name="title_activity_main">Comanda</string>
+    <string name="package_name">pe.comanda.cevicheria</string>
+    <string name="custom_url_scheme">pe.comanda.cevicheria</string>
+</resources>

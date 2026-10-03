@@ -1,0 +1,53 @@
+rules_version = '2';
+
+// Reglas de Firestore para "Comanda Cevichería".
+//
+// Esta es una herramienta interna del restaurante, sin login de usuarios
+// (el "código de mozo" y el código de administrador son solo para la
+// interfaz, no autenticación real de Firebase). Por eso, por ahora, se
+// permite leer/escribir estas colecciones específicas a cualquiera que
+// tenga el enlace del sitio — no es pública en el sentido de que nadie la
+// va a encontrar sola (no está indexada, no se comparte el enlace), pero
+// técnicamente alguien que lo consiguiera podría leer/escribir datos.
+//
+// Para un uso más serio a futuro, lo normal sería agregar un login simple
+// (aunque sea una sola contraseña compartida vía Firebase Auth anónimo +
+// una clave) y condicionar estas reglas a "request.auth != null". Se deja
+// como nota para más adelante, no bloquea el uso de hoy.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /pedidos/{pedidoId} {
+      allow read, write: if true;
+    }
+    match /mesas/{mesaId} {
+      allow read, write: if true;
+    }
+    match /ambientes/{ambienteId} {
+      allow read, write: if true;
+    }
+    match /productos/{productoId} {
+      allow read, write: if true;
+    }
+    match /codigosReales/{productoId} {
+      allow read, write: if true;
+    }
+    // Solo la escribe el programa puente (con su llave de administrador,
+    // que SIEMPRE puede saltarse estas reglas); el navegador solo lee.
+    match /estadoPuente/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    // El navegador crea pedidos de "descartar"; el puente los marca
+    // atendidos. Nadie necesita borrar ni leer los de otros.
+    match /comandosPuente/{comandoId} {
+      allow read, create, update: if true;
+      allow delete: if false;
+    }
+
+    // Todo lo demás, cerrado por defecto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
