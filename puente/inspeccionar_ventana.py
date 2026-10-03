@@ -43,7 +43,17 @@ import sys
 import json
 import os
 
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+# IMPORTANTE: cuando este script corre compilado como .exe de un solo
+# archivo (PyInstaller --onefile), __file__ apunta a una carpeta TEMPORAL
+# donde Windows lo descomprime al vuelo (algo como
+# C:\Users\...\AppData\Local\Temp\_MEIxxxxx), no a la carpeta real donde
+# está el .exe — y esa carpeta temporal se borra sola apenas el programa
+# termina. Por eso hay que usar sys.argv[0] (la ruta del .exe en sí) en
+# vez de __file__ cuando está "congelado" (sys.frozen), igual que hace
+# bridge_server.py, para que config.json y los inspeccion_*.txt queden
+# siempre al lado del .exe, donde el usuario los puede encontrar.
+BASE_DIR = os.path.dirname(os.path.abspath(sys.argv[0] if getattr(sys, "frozen", False) else __file__))
+CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 
 
 def cargar_ventana_cfg():
@@ -97,7 +107,7 @@ def main():
     ventana.set_focus()
 
     nombre_archivo = "inspeccion_%s.txt" % etiqueta
-    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), nombre_archivo)
+    ruta = os.path.join(BASE_DIR, nombre_archivo)
 
     with open(ruta, "w", encoding="utf-8") as f:
         f.write("Título de la ventana: %r\n" % ventana.window_text())

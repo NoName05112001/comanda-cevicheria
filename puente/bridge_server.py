@@ -107,10 +107,16 @@ CONFIG_DEFAULT = {
         {"accion": "esperar", "ms": 150},
         {"accion": "tecla", "tecla": "{ENTER}"}
     ],
+    # Confirmado por el usuario (2026-10-03): después de escribir el código
+    # de mozo hacen falta DOS Enter, no uno — el primero termina el campo
+    # del código y pasa el foco al botón "Aceptar"; el segundo Enter es el
+    # que de verdad lo acciona.
     "secuencia_registrar": [
         {"accion": "tecla", "tecla": "%r"},
         {"accion": "esperar", "ms": 400},
         {"accion": "escribir", "texto": "{mozoCode}"},
+        {"accion": "tecla", "tecla": "{ENTER}"},
+        {"accion": "esperar", "ms": 200},
         {"accion": "tecla", "tecla": "{ENTER}"}
     ],
     "secuencia_finalizar": [
@@ -322,20 +328,64 @@ def _ejecutar_pasos(pasos, variables):
             logger.warning('Paso desconocido en config.json ignorado: %r', paso)
 
 
+def _separar_items_automatizables(items):
+    """Divide los platos de un pedido en dos listas:
+
+    - automatizables: uno por cada código real DISTINTO — se escriben en
+      "999" por el campo "carta" de la forma normal.
+    - manuales: todo lo demás, con el motivo. Incluye los que no tienen
+      código real mapeado TODAVÍA, y también el caso de "mismo plato pero
+      con un comentario distinto" (ej. piden 2 Cev Mix, uno normal y otro
+      "sin ají": en la app quedan como 2 renglones con el mismo código).
+      Confirmado por el usuario (2026-10-03): en "999" eso NO se carga
+      escribiendo la carta dos veces — se escribe el plato una sola vez
+      (con su comentario) y la(s) unidad(es) extra con otro comentario se
+      suman aparte, haciendo doble clic en la columna "cantidad" de esa
+      misma fila ya cargada (abre una ventanita para indicar cuántas
+      unidades más agregar, con su propio comentario). Ese doble clic
+      todavía no se puede automatizar (hace falta mapear esa ventanita
+      con inspeccionar_ventana.py primero), así que por ahora esos
+      renglones quedan para que el mozo los sume a mano en el momento.
+    """
+    automatizables = []
+    manuales = []
+    codigos_vistos = set()
+    for it in items:
+        codigo = it.get("codigo")
+        if not codigo:
+            manuales.append((it, "sin código real todavía"))
+            continue
+        if codigo in codigos_vistos:
+            manuales.append((
+                it,
+                "mismo plato ya cargado arriba con otro comentario/cantidad — "
+                'sumar a mano en "999" con doble clic en "cantidad" de esa fila'
+            ))
+            continue
+        codigos_vistos.add(codigo)
+        automatizables.append(it)
+    return automatizables, manuales
+
+
+def _avisar_items_manuales(mesa_numero, manuales):
+    if not manuales:
+        return
+    detalle = "; ".join(
+        "%sx %s (%s)" % (it.get("cantidad"), it.get("nombreApp"), motivo)
+        for it, motivo in manuales
+    )
+    logger.warning(
+        'Mesa %s: %d plato(s) requieren carga manual en "999" (%s).',
+        mesa_numero, len(manuales), detalle
+    )
+
+
 def registrar_en_999(cfg, datos):
-    faltantes = [it for it in datos["items"] if not it.get("codigo")]
-    if faltantes:
-        nombres = ", ".join(it["nombreApp"] for it in faltantes)
-        logger.warning(
-            'Mesa %s: %d plato(s) sin código real todavía (%s) — el mozo '
-            'tendrá que escribirlos a mano en "999".',
-            datos["mesaNumero"], len(faltantes), nombres
-        )
+    automatizables, manuales = _separar_items_automatizables(datos["items"])
+    _avisar_items_manuales(datos["mesaNumero"], manuales)
 
     ventana = _activar_ventana_999(cfg)
-    for it in datos["items"]:
-        if not it.get("codigo"):
-            continue
+    for it in automatizables:
         variables = {
             "carta": it["codigo"],
             "cantidad": it.get("cantidad", 1),
@@ -365,11 +415,15 @@ def simular(tipo, datos):
     if tipo == "registrar":
         logger.info('[SIMULACIÓN] Registraría en "999" — Mesa %s (mozo %s):',
                      datos.get("mesaNumero"), datos.get("mozoCode"))
-        for it in datos.get("items", []):
-            codigo = it.get("codigo") or "??? (sin código real, revisar codigosReales)"
-            logger.info('   - %sx [%s] %s%s',
-                        it.get("cantidad"), codigo, it.get("nombreApp"),
+        automatizables, manuales = _separar_items_automatizables(datos.get("items", []))
+        for it in automatizables:
+            logger.info('   - %sx [%s] %s%s  (por teclado)',
+                        it.get("cantidad"), it["codigo"], it.get("nombreApp"),
                         (" — " + it["comentario"]) if it.get("comentario") else "")
+        for it, motivo in manuales:
+            logger.info('   - %sx %s%s  -> CARGA MANUAL (%s)',
+                        it.get("cantidad"), it.get("nombreApp"),
+                        (" — " + it["comentario"]) if it.get("comentario") else "", motivo)
         logger.info('   -> Presionaría "Registrar" con código de mozo "%s"', datos.get("mozoCode"))
     else:
         logger.info('[SIMULACIÓN] Finalizaría (pasaría a cobrar) — Mesa %s (mozo %s). '
