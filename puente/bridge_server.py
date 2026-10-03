@@ -71,9 +71,38 @@ CONFIG_DEFAULT = {
     # que es lo más común en sistemas de punto de venta de este tipo.
     # "uia" (UI Automation) funciona mejor con programas más modernos.
     "backend_automatizacion": "win32",
+    # NUEVO (2026-10-03): si está en true, el puente hace los clics de
+    # ambiente -> mesa por su cuenta antes de escribir el pedido, en vez
+    # de necesitar que alguien deje "999" ya posicionado ahí a mano. Esto
+    # es justo lo que permite que pedidos de mesas/ambientes distintos
+    # (mandados casi al mismo tiempo por mozos distintos) entren cada uno
+    # a su mesa real, sin cruzarse. Se resolvió con los archivos
+    # inspeccion_ambientes.txt / inspeccion_mesas.txt / inspeccion_pedido.txt
+    # que mandó el usuario (ver _navegar_a_mesa más abajo).
+    #
+    # IMPORTANTE para probarlo sin riesgo: este interruptor es
+    # INDEPENDIENTE de "modo". Con navegar_con_clics:true y modo:
+    # "simulacion", el puente SÍ hace los clics reales de ambiente/mesa en
+    # "999" (para que puedas verificar que entra a la mesa correcta), pero
+    # NO escribe ningún plato ni código de mozo (eso se queda en el log,
+    # como siempre en modo simulación). Recién con modo:"real" además
+    # escribe de verdad.
+    "navegar_con_clics": False,
     "ventana": {
         "proceso": "Restaurante",
         "titulo_contiene": "REALIZAR PEDIDOS POR MESAS"
+    },
+    # Nombre del ambiente tal como lo guarda la app (colección "ambientes"
+    # de Firestore, campo "nombre") -> el texto EXACTO de su etiqueta
+    # dentro de "999" (confirmado contra inspeccion_ambientes.txt,
+    # 2026-10-03 — "999" usa mayúsculas/abreviaturas distintas a la app
+    # a propósito, es el texto que programó el proveedor del sistema).
+    "ambiente_app_a_999": {
+        "1er Piso": "1º PISO",
+        "2do Piso": "2º PISO",
+        "Mezanine": "MEZANINE",
+        "Privado": "PRIVADO",
+        "Salón": "SALON"
     },
     "reintentos_activar_ventana": 3,
     "espera_entre_reintentos_ms": 500,
@@ -313,6 +342,111 @@ def _activar_ventana_999(cfg):
     return ventana
 
 
+# ---------------------------------------------------------------------------
+# Navegación por clics (ambiente -> mesa) — NUEVO 2026-10-03
+# ---------------------------------------------------------------------------
+#
+# Se arma a partir de los 3 archivos inspeccion_*.txt que mandó el usuario
+# (sacados con inspeccionar_ventana.py en la PC real). Hallazgos clave:
+#
+#   - Cada ambiente ("MEZANINE", "1º PISO", etc.) y cada mesa ("M07", etc.)
+#     es una etiqueta (System.Windows.Forms.Label) que se encuentra por su
+#     TEXTO EXACTO, no por su posición en pantalla — así que no importa que
+#     cada ambiente tenga las mesas acomodadas distinto, el clic cae solo
+#     donde esté.
+#   - Esos identificadores (auto_id, control_type) solo se pueden usar
+#     conectando con el backend "uia" de pywinauto — por eso estas
+#     funciones abren su PROPIA conexión en vez de reusar la de
+#     _activar_ventana_999 (que puede estar en "win32" para el tipeo).
+#   - La misma etiqueta de texto aparece REPETIDA muchas veces en el árbol
+#     completo de la ventana (quedan copias de pantallas anteriores que no
+#     se cerraron del todo, es normal en apps tipo MDI como "999") — por
+#     eso _encontrar_visible() exige que haya EXACTAMENTE UNA copia
+#     visible en pantalla antes de hacerle clic; si hay 0 o más de 1,
+#     prefiere fallar con un error claro antes que arriesgarse a tocar la
+#     mesa equivocada.
+
+def _conectar_uia(cfg):
+    import psutil
+    from pywinauto import Application
+    from pywinauto.findwindows import find_elements
+
+    proceso = cfg["ventana"]["proceso"]
+    pids = []
+    for p in psutil.process_iter(["pid", "name"]):
+        try:
+            nombre = p.info.get("name") or ""
+        except Exception:
+            continue
+        if proceso.lower() in nombre.lower():
+            pids.append(p.info["pid"])
+    if not pids:
+        raise RuntimeError(
+            'No se encontró ningún proceso llamado "%s" corriendo en esta '
+            'computadora. ¿"999" está abierto?' % proceso
+        )
+    candidatos = []
+    for pid in pids:
+        candidatos.extend(find_elements(backend="uia", process=pid))
+    if not candidatos:
+        raise RuntimeError(
+            'El proceso "%s" está corriendo, pero no se le encontró ninguna '
+            'ventana por UIA (necesaria para los clics). ¿"999" está '
+            'abierto y no minimizado?' % proceso
+        )
+    app = Application(backend="uia").connect(process=candidatos[0].process_id)
+    ventana = app.top_window()
+    ventana.set_focus()
+    return ventana
+
+
+def _encontrar_visible(ventana, titulo, reintentos=6, espera_ms=400):
+    """Busca, dentro de 'ventana', TODOS los controles cuyo texto sea
+    exactamente 'titulo' y exige que haya exactamente UNO visible en
+    pantalla en ese momento (ver nota arriba sobre las copias viejas).
+    Reintenta por si la pantalla todavía está cargando."""
+    import time as _time
+    ultimo_motivo = "sin intentos"
+    for _ in range(reintentos):
+        try:
+            candidatos = ventana.descendants(title=titulo)
+        except Exception as e:
+            candidatos = []
+            ultimo_motivo = str(e)
+        visibles = []
+        for c in candidatos:
+            try:
+                if c.is_visible():
+                    visibles.append(c)
+            except Exception:
+                continue
+        if len(visibles) == 1:
+            return visibles[0]
+        ultimo_motivo = "%d candidato(s), %d visible(s)" % (len(candidatos), len(visibles))
+        _time.sleep(espera_ms / 1000.0)
+    raise RuntimeError(
+        'No se encontró de forma segura el control "%s" en "999" (%s). '
+        "No se hizo clic, para no arriesgar tocar otra mesa por error."
+        % (titulo, ultimo_motivo)
+    )
+
+
+def _navegar_a_mesa(cfg, ambiente_999, mesa_numero):
+    """Hace los clics reales de ambiente -> mesa en "999". Devuelve la
+    ventana (conexión UIA) ya posicionada en la pantalla de esa mesa, por
+    si hace falta para seguir buscando controles ahí (ej. en el futuro,
+    para el doble clic en "cantidad" del plato repetido con otro
+    comentario)."""
+    ventana = _conectar_uia(cfg)
+    ambiente_ctrl = _encontrar_visible(ventana, ambiente_999)
+    ambiente_ctrl.click_input()
+    time.sleep(0.6)
+    mesa_ctrl = _encontrar_visible(ventana, mesa_numero)
+    mesa_ctrl.click_input()
+    time.sleep(0.6)
+    return ventana
+
+
 def _ejecutar_pasos(pasos, variables):
     from pywinauto.keyboard import send_keys
     for paso in pasos:
@@ -380,10 +514,34 @@ def _avisar_items_manuales(mesa_numero, manuales):
     )
 
 
-def registrar_en_999(cfg, datos):
+def _navegar_si_corresponde(cfg, datos):
+    """Si navegar_con_clics está prendido en config.json, hace los clics
+    reales de ambiente -> mesa ANTES de tocar el teclado. Esto corre sin
+    importar si el modo es "simulacion" o "real" — a propósito, para
+    poder probar que el clic cae en la mesa correcta sin arriesgar que
+    además escriba algo (ver comentario de "navegar_con_clics" en
+    CONFIG_DEFAULT)."""
+    if not cfg.get("navegar_con_clics"):
+        return
+    ambiente999 = datos.get("ambiente999")
+    mesa_numero = datos.get("mesaNumero")
+    if not ambiente999:
+        logger.warning(
+            'Mesa %s: no se pudo navegar por clics (no se sabe a qué '
+            'ambiente de "999" corresponde) — se intenta escribir donde '
+            '"999" ya esté parado.', mesa_numero
+        )
+        return
+    _navegar_a_mesa(cfg, ambiente999, mesa_numero)
+
+
+def registrar_en_999(cfg, datos, escribir=True):
     automatizables, manuales = _separar_items_automatizables(datos["items"])
     _avisar_items_manuales(datos["mesaNumero"], manuales)
 
+    _navegar_si_corresponde(cfg, datos)
+    if not escribir:
+        return
     ventana = _activar_ventana_999(cfg)
     for it in automatizables:
         variables = {
@@ -401,7 +559,10 @@ def registrar_en_999(cfg, datos):
     ventana.set_focus()
 
 
-def finalizar_en_999(cfg, datos):
+def finalizar_en_999(cfg, datos, escribir=True):
+    _navegar_si_corresponde(cfg, datos)
+    if not escribir:
+        return
     ventana = _activar_ventana_999(cfg)
     _ejecutar_pasos(cfg["secuencia_finalizar"], {
         "mozoCode": datos.get("mozoCode", ""), "mesaNumero": datos.get("mesaNumero", ""),
@@ -458,12 +619,15 @@ class PuenteFirestore(object):
         self.cola = []  # lista de eventos pendientes, ordenada por ts
         self.codigos_por_producto = {}
         self.mesas_por_id = {}
+        self.ambientes_por_id = {}
         self.log = []  # [{texto, ok, hora}], más reciente primero
         self.enviando = False
         self._cargar_codigos_reales()
         self._cargar_mesas()
+        self._cargar_ambientes()
         self._watch_codigos = self.db.collection("codigosReales").on_snapshot(self._on_codigos)
         self._watch_mesas = self.db.collection("mesas").on_snapshot(self._on_mesas)
+        self._watch_ambientes = self.db.collection("ambientes").on_snapshot(self._on_ambientes)
         self._watch_pedidos = self.db.collection("pedidos").on_snapshot(self._on_pedidos)
         self._watch_comandos = self.db.collection("comandosPuente").on_snapshot(self._on_comandos)
 
@@ -497,6 +661,34 @@ class PuenteFirestore(object):
             mapa[d.id] = d.to_dict()
         self.mesas_por_id = mapa
 
+    def _cargar_ambientes(self):
+        # Para saber a qué ambiente real de "999" hay que entrar antes de
+        # cargar una mesa (ver navegar_con_clics / _navegar_a_mesa).
+        try:
+            docs = self.db.collection("ambientes").stream()
+            self.ambientes_por_id = {d.id: d.to_dict() for d in docs}
+        except Exception as e:
+            logger.warning("No se pudo leer ambientes todavía: %s", e)
+
+    def _on_ambientes(self, docs, changes, read_time):
+        mapa = {}
+        for d in docs:
+            mapa[d.id] = d.to_dict()
+        self.ambientes_por_id = mapa
+
+    def _ambiente_999_para_mesa(self, mesa_doc):
+        """Dado el documento de una mesa (de self.mesas_por_id), devuelve
+        el texto EXACTO que usa "999" para ese ambiente (ej. "MEZANINE"),
+        o None si no se pudo resolver (ambiente no sembrado, nombre nuevo
+        sin mapear en config.json, etc.)."""
+        if not mesa_doc:
+            return None
+        ambiente_doc = self.ambientes_por_id.get(mesa_doc.get("ambienteId")) or {}
+        nombre_app = ambiente_doc.get("nombre")
+        if not nombre_app:
+            return None
+        return self.cfg.get("ambiente_app_a_999", {}).get(nombre_app)
+
     def _ts_valor(self, campo):
         """Convierte un campo de Firestore (Timestamp o None, puede no estar
         resuelto todavía justo después de escribirse) a algo ordenable."""
@@ -516,6 +708,7 @@ class PuenteFirestore(object):
                     continue
                 mesa_doc = self.mesas_por_id.get(pedido.get("mesaId")) or {}
                 mesa_numero = mesa_doc.get("numero") or pedido.get("mesaNumero") or pedido.get("mesaId") or "?"
+                ambiente999 = self._ambiente_999_para_mesa(mesa_doc)
                 items = pedido.get("items") or []
                 nuevos_items = [
                     it for it in items
@@ -542,6 +735,7 @@ class PuenteFirestore(object):
                             "ts": self._ts_valor(pedido.get("registradoPuenteEn")),
                             "payload": {
                                 "mesaNumero": mesa_numero,
+                                "ambiente999": ambiente999,
                                 "mozoCode": pedido.get("mozoCode") or "",
                                 "pedidoId": pedido_id,
                                 "items": items_payload
@@ -561,6 +755,7 @@ class PuenteFirestore(object):
                             "ts": self._ts_valor(pedido.get("cerradoPuenteEn")),
                             "payload": {
                                 "mesaNumero": mesa_numero,
+                                "ambiente999": ambiente999,
                                 "mozoCode": pedido.get("mozoCode") or "",
                                 "pedidoId": pedido_id
                             },
@@ -624,18 +819,35 @@ class PuenteFirestore(object):
                         break
                     evento = self.cola[0]
                 modo = self.cfg.get("modo", "simulacion")
+                navegar = bool(self.cfg.get("navegar_con_clics"))
+                escribir = (modo == "real")
                 try:
                     if modo == "simulacion":
+                        # Aunque no vaya a escribir nada, siempre se deja
+                        # en el log qué haría — sirve para revisar antes
+                        # de pasar a modo real.
                         simular(evento["tipo"], evento["payload"])
-                    else:
+                    if escribir or navegar:
+                        # Si navegar_con_clics está prendido, esto corre
+                        # IGUAL en modo simulación (hace los clics reales
+                        # de ambiente/mesa para poder verificar que caen
+                        # bien), pero "escribir" decide si además tipea
+                        # algo — ver _navegar_si_corresponde más arriba.
                         _mostrar_overlay()
                         try:
                             if evento["tipo"] == "registrar":
-                                registrar_en_999(self.cfg, evento["payload"])
+                                registrar_en_999(self.cfg, evento["payload"], escribir=escribir)
                             else:
-                                finalizar_en_999(self.cfg, evento["payload"])
-                            logger.info('Mesa %s: %s escrito en "999".',
-                                        evento["payload"]["mesaNumero"], evento["tipo"])
+                                finalizar_en_999(self.cfg, evento["payload"], escribir=escribir)
+                            if escribir:
+                                logger.info('Mesa %s: %s escrito en "999".',
+                                            evento["payload"]["mesaNumero"], evento["tipo"])
+                            elif navegar:
+                                logger.info(
+                                    'Mesa %s: clic de navegación hecho en "999" '
+                                    "(modo simulación, no escribió nada).",
+                                    evento["payload"]["mesaNumero"]
+                                )
                         finally:
                             _ocultar_overlay()
                     modo_txt = " (modo simulación, no tocó \"999\")" if modo == "simulacion" else ""
