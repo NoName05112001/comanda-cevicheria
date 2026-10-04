@@ -231,44 +231,22 @@ def guardar_procesados(procesados):
 # Automatización de la ventana de "999" (solo se usa en modo "real")
 # ---------------------------------------------------------------------------
 
-_overlay_lock = threading.Lock()
-_overlay_win = None
-
-
+# ANTES esto abría una ventanita (Tkinter) siempre encima avisando "no tocar
+# el teclado". Se quitó (2026-10-04): Tkinter necesita que TODO pase por el
+# hilo principal del programa, pero este aviso se mostraba/ocultaba desde un
+# hilo de fondo (procesar_cola corre en su propio hilo, uno nuevo por cada
+# pedido que llega) — crear una ventana de Tk desde ahí funciona la primera
+# vez "de suerte" y casi siempre revienta el programa entero la segunda o
+# tercera vez. Esto era justo la causa de que el puente se cerrara solo
+# después de uno o dos pedidos. Como reemplazo, el aviso ahora es solo texto
+# en la consola/log (ver _ejecutar_pasos y procesar_cola), que sí es seguro
+# desde cualquier hilo.
 def _mostrar_overlay():
-    """Ventanita chica, siempre encima, avisando que no se toque el teclado
-    mientras el puente está escribiendo en "999". Solo aparece en modo real."""
-    global _overlay_win
-    try:
-        import tkinter as tk
-    except Exception:
-        return
-    with _overlay_lock:
-        if _overlay_win is not None:
-            return
-        root = tk.Tk()
-        root.title("Puente Comanda Cevichería")
-        root.attributes("-topmost", True)
-        root.geometry("340x70+40+40")
-        root.configure(bg="#c0392b")
-        label = tk.Label(
-            root, text="PEDIDO EN PROCESO\nNo tocar el teclado ni el mouse",
-            bg="#c0392b", fg="white", font=("Segoe UI", 11, "bold"), justify="center"
-        )
-        label.pack(expand=True, fill="both")
-        _overlay_win = root
-        root.update()
+    logger.info("PEDIDO EN PROCESO — no tocar el teclado ni el mouse de esta PC.")
 
 
 def _ocultar_overlay():
-    global _overlay_win
-    with _overlay_lock:
-        if _overlay_win is not None:
-            try:
-                _overlay_win.destroy()
-            except Exception:
-                pass
-            _overlay_win = None
+    pass
 
 
 def _escapar_para_send_keys(texto):
