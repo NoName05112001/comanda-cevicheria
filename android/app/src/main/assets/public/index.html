@@ -1235,10 +1235,19 @@ function parsearLineaPedido(lineaOriginal){
     if(directo){ producto = directo.producto; w = directo.restante; }
   }
   var marca = null, temperatura = null;
-  if(GASEOSA_MARCA_CC_RE.test(w)){ marca="Coca-Cola"; w = w.replace(GASEOSA_MARCA_CC_RE," "); }
-  else if(GASEOSA_MARCA_IK_RE.test(w)){ marca="Inca Kola"; w = w.replace(GASEOSA_MARCA_IK_RE," "); }
-  if(TEMP_HELADA_RE.test(w)){ temperatura="Helada"; w = w.replace(TEMP_HELADA_RE," "); }
-  else if(TEMP_SINHELAR_RE.test(w)){ temperatura="Sin helar"; w = w.replace(TEMP_SINHELAR_RE," "); }
+  /* "Comentario crudo" (lo que se manda al sistema de la PC): se guarda tal cual lo
+     escribió el mozo, con las abreviaturas sin interpretar (ej. "ik h" y no "Inca Kola ·
+     Helada"), porque se imprime y mientras más corto, mejor. La app sí muestra la
+     interpretación completa (detalle); esto es aparte (ver comentarioPuente). */
+  var fueDirecto = !!producto;
+  var wCrudo = w;
+  var crudoMarcaTemp = [];
+  var mMarca;
+  if((mMarca = w.match(GASEOSA_MARCA_CC_RE))){ marca="Coca-Cola"; crudoMarcaTemp.push(mMarca[0]); w = w.replace(GASEOSA_MARCA_CC_RE," "); }
+  else if((mMarca = w.match(GASEOSA_MARCA_IK_RE))){ marca="Inca Kola"; crudoMarcaTemp.push(mMarca[0]); w = w.replace(GASEOSA_MARCA_IK_RE," "); }
+  var mTemp;
+  if((mTemp = w.match(TEMP_HELADA_RE))){ temperatura="Helada"; crudoMarcaTemp.push(mTemp[0]); w = w.replace(TEMP_HELADA_RE," "); }
+  else if((mTemp = w.match(TEMP_SINHELAR_RE))){ temperatura="Sin helar"; crudoMarcaTemp.push(mTemp[0]); w = w.replace(TEMP_SINHELAR_RE," "); }
   if(!producto){
     var tokens = w.split(/\s+/).filter(Boolean);
     if(tokens.length>0){
@@ -1246,29 +1255,46 @@ function parsearLineaPedido(lineaOriginal){
       if(match){ producto = match.producto; sobranteExtra = match.sobran.join(" ").trim(); }
     }
   } else {
-    sobranteExtra = w.trim();
+    /* sin la palabra "gaseosa": ya está dicha por el producto (evita "gaseosa" suelta en el detalle) */
+    sobranteExtra = w.replace(/\bgaseosas?\b/g," ").replace(/\s+/g," ").trim();
   }
   /* Si la cantidad no se puso al inicio de la línea ("2 Cev simple"), también
      se acepta un número suelto al FINAL como cantidad ("Cev simple 2" = 2
      platos, "Cev simple sin ají 2" = 2 platos con detalle "sin ají"), en vez
      de dejarlo colado como si fuera parte del comentario. */
+  var cantidadDeFinal = false;
   if(producto && !cantidadFijada && sobranteExtra){
     var mCantFinal = sobranteExtra.match(/(?:^|\s)(\d{1,2})$/);
     if(mCantFinal){
       var cantidadFinal = parseInt(mCantFinal[1],10);
       if(cantidadFinal>=1 && cantidadFinal<=30){
         cantidad = cantidadFinal;
+        cantidadDeFinal = true;
         sobranteExtra = sobranteExtra.slice(0, mCantFinal.index).trim();
       }
     }
   }
   var detalleFinal = detallesParentesis.slice();
   if(sobranteExtra) detalleFinal.push(sobranteExtra);
+  /* Comentario crudo para el puente: gaseosa/táper resueltos directo -> lo que sobró
+     del texto ANTES de interpretar marca/temperatura (queda "ik h"), sin la palabra
+     "gaseosa" (ya va como producto). Resto de platos -> lo que sobró + cualquier
+     marca/temperatura que se haya tragado la interpretación. */
+  var crudo;
+  if(fueDirecto){
+    crudo = wCrudo.replace(/\bgaseosas?\b/g," ").replace(/\s+/g," ").trim();
+    if(cantidadDeFinal) crudo = crudo.replace(/(?:^|\s)\d{1,2}$/,"").trim();
+  } else {
+    crudo = (sobranteExtra+" "+crudoMarcaTemp.join(" ")).replace(/\s+/g," ").trim();
+  }
+  var detalleCrudo = detallesParentesis.slice();
+  if(crudo) detalleCrudo.push(crudo);
   return {
     raw: lineaOriginal,
     cantidad: cantidad,
     producto: producto,
     detalle: detalleFinal.join(", "),
+    detalleCrudo: detalleCrudo.join(", "),
     prefsAuto: {marca:marca, temperatura:temperatura}
   };
 }
@@ -1302,6 +1328,11 @@ function agregarPedidoTexto(mesaId, draftItems){
       obsChips: [],
       obsTexto: d.detalle||"",
       detalle: buildDetalle(producto, draftObj),
+      /* Lo que lee el puente y escribe en "999" como comentario: texto tal cual se
+         comandó (abreviaturas sin interpretar). "detalle" es solo para mostrar en la app.
+         Si el plato se edita después a mano, este campo se pierde y el puente vuelve a
+         usar "detalle" (ver saveItemToPedido/edit-item). */
+      comentarioPuente: d.detalleCrudo||"",
       servido: false,
       enviadoCocina: false
     };
@@ -1550,7 +1581,15 @@ function toggleItemServido(mesaId, itemId){
   var items = pedido.items.map(function(it){
     if(it.id!==itemId) return it;
     var nuevoServido = !it.servido;
-    return Object.assign({}, it, {servido: nuevoServido, servidoEn: nuevoServido ? horaServidorPuente() : null});
+    /* OJO: acá NO se puede usar horaServidorPuente() (que devuelve
+       firebase.firestore.FieldValue.serverTimestamp() en modo nube) —
+       Firestore prohíbe ese tipo de "sello" como elemento DENTRO de un
+       arreglo (este objeto "it" es uno de los elementos del arreglo
+       "items"), y el intentarlo hacía que el .update() entero fallara
+       de inmediato, sin guardar nada — por eso "marcar servido" dejó de
+       funcionar en ambos lados. Date.now() es un número normal (no un
+       sello), así que sí se puede guardar dentro del arreglo sin problema. */
+    return Object.assign({}, it, {servido: nuevoServido, servidoEn: nuevoServido ? Date.now() : null});
   });
   DB.collection("pedidos").doc(pedido.id).update({items:items, actualizadoEn:new Date().toISOString()});
 }
@@ -1946,7 +1985,7 @@ function renderTextoPedidoScreen(params){
   } else {
     var draft = S.textoPedidoDraft;
     var okCount = draft.filter(function(d){return d.producto;}).length;
-    body += '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.4;">Se identificaron '+okCount+' de '+draft.length+' l&iacute;neas. Revisa antes de agregar; toca una l&iacute;nea no identificada para buscarla a mano.</div>';
+    body += '<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;line-height:1.4;">Se identificaron '+okCount+' de '+draft.length+' l&iacute;neas. Revisa antes de agregar; si una l&iacute;nea sale &ldquo;No identificado&rdquo;, toca &ldquo;Editar texto&rdquo; y corr&iacute;gela.</div>';
     draft.forEach(function(d, idx){
       if(d.producto){
         body += '<div class="itemcard" style="margin-bottom:10px;">'+
@@ -1960,7 +1999,6 @@ function renderTextoPedidoScreen(params){
           '<div class="row1"><div class="name" style="color:var(--warning);">No identificado</div>'+
           '<button class="iconbtn small" data-action="texto-pedido-quitar" data-index="'+idx+'" title="Quitar">&#10005;</button></div>'+
           '<div class="detalle">&ldquo;'+escapeHtml(d.raw)+'&rdquo;</div>'+
-          '<button class="btn secondary sm" style="margin-top:8px;" data-action="texto-pedido-buscar-manual" data-mesa-id="'+mesa.id+'" data-index="'+idx+'">Buscar este plato</button>'+
           '</div>';
       }
     });
@@ -2499,8 +2537,9 @@ function renderComandaModal(m){
     });
   });
   body += '</div>';
-  var footer = '<button class="btn primary block" data-action="imprimir-cuenta">Imprimir</button>';
-  return sheetWrap(header, body, footer);
+  /* Sin botón "Imprimir" a propósito: la comanda de cocina ya sale por el sistema de la
+     PC (puente). Imprimir solo se usa en la ventana de la CUENTA (renderCuentaModal). */
+  return sheetWrap(header, body, "");
 }
 
 
@@ -2779,7 +2818,10 @@ document.addEventListener("click", function(ev){
     case "move-mesa": moveMesa(el.getAttribute("data-id"), parseInt(el.getAttribute("data-dir"),10)); return;
     case "open-mesa": push("mesa", {mesaId: el.getAttribute("data-id")}); return;
 
-    case "go-categorias": S.busquedaProducto=""; push("categorias", {mesaId: el.getAttribute("data-mesa-id")}); return;
+    /* "Realizar pedido" / "Agregar productos" ya NO pasan por la carta (categorías ni
+       buscador de platos): entran directo a "pedido de varios platos" (texto). La carta
+       sigue existiendo, solo para gestionarla desde el panel (carta-admin). */
+    case "go-categorias": S.busquedaProducto=""; S.textoPedidoDraft=null; S.textoPedidoInput=""; push("texto-pedido", {mesaId: el.getAttribute("data-mesa-id")}); return;
     case "go-texto-pedido": S.textoPedidoDraft=null; S.textoPedidoInput=""; push("texto-pedido", {mesaId: el.getAttribute("data-mesa-id")}); return;
     case "texto-pedido-interpretar": {
       var txtEl = document.getElementById("f-texto-pedido");

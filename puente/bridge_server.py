@@ -704,7 +704,14 @@ class PuenteFirestore(object):
                                 "nombreReal": (cr or {}).get("nombreReal"),
                                 "nombreApp": it.get("nombre"),
                                 "cantidad": it.get("cantidad"),
-                                "comentario": it.get("detalle") or ""
+                                # "comentarioPuente" = texto tal cual lo comandó el
+                                # mozo (abreviaturas sin interpretar, ej. "ik h"),
+                                # corto a propósito porque se imprime. Si el plato no
+                                # lo trae (platos viejos, o editados a mano en la app)
+                                # se usa "detalle", como antes.
+                                "comentario": (it.get("comentarioPuente")
+                                               if it.get("comentarioPuente") is not None
+                                               else (it.get("detalle") or ""))
                             })
                         evento = {
                             "key": key,
