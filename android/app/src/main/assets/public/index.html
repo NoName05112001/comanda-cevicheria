@@ -197,7 +197,10 @@ input,textarea,select{font-family:inherit;font-size:16px;}
   font-family:'Sora',sans-serif;font-weight:800;font-size:12.5px;line-height:1.1;
   cursor:pointer;box-shadow:var(--shadow);overflow:hidden;padding:2px;
 }
+.plantile{flex-direction:column;}
 .plantile .num{white-space:nowrap;}
+.mozotag{font-family:'DM Sans',sans-serif;font-size:9.5px;font-weight:700;color:var(--teal);line-height:1;margin-top:2px;white-space:nowrap;}
+.tile .mozotag{font-size:11.5px;margin-top:auto;}
 .plantile.libre{background:var(--success-bg);border-color:var(--success);}
 .plantile.abierto{background:#FCE7DC;border-color:var(--accent);}
 .plantile.cerrado{background:var(--warning-bg);border-color:var(--warning);}
@@ -867,6 +870,23 @@ function subscribeAll(){
     subscribeEstadoPuente();
   }
 }
+/* Borra UNA vez ambientes que no son de los 5 oficiales (ej. un "Segundo piso" suelto)
+   y que no tienen ninguna mesa. Solo con datos confirmados por el servidor (no del
+   caché) y solo si existe la lista oficial (APK/sitio publicado). */
+var _limpiezaAmbientesHecha = false;
+function limpiarAmbientesSobrantes(){
+  if(_limpiezaAmbientesHecha) return;
+  if(typeof SEED_AMBIENTES === "undefined" || !S._srv_ambientes || !S._srv_mesas) return;
+  if(!S.ambientes.length || !S.mesas.length) return;
+  _limpiezaAmbientesHecha = true;
+  var oficiales = {};
+  SEED_AMBIENTES.forEach(function(a){ oficiales[a.id] = true; });
+  S.ambientes.forEach(function(a){
+    if(oficiales[a.id]) return;
+    if(S.mesas.some(function(m){ return m.ambienteId===a.id; })) return;
+    try{ DB.collection("ambientes").doc(a.id).delete().catch(function(e){ console.error("limpieza ambiente", e); }); }catch(e){}
+  });
+}
 function subscribeCollection(name, key){
   DB.collection(name).onSnapshot(function(snap){
     S[key] = snap.docs.filter(function(d){return d.exists;}).map(function(d){
@@ -883,6 +903,10 @@ function subscribeCollection(name, key){
       return o;
     });
     S.ready = true;
+    if(key==="ambientes" || key==="mesas"){
+      S["_srv_"+key] = !!(snap.metadata && snap.metadata.fromCache===false);
+      limpiarAmbientesSobrantes();
+    }
     if(key==="pedidos"){ purgeHistorialViejo(); purgeMesasLiberadas(); }
     if(key==="mesas") purgeMesasLiberadas();
     if(key==="pedidos" && PUENTE_MODE) puenteRevisarPedidos();
@@ -896,7 +920,7 @@ setInterval(function(){ purgeHistorialViejo(); purgeMesasLiberadas(); }, 60*1000
    los PENDIENTE_SERVIDO_GRACIA_MS, sin esperar a que llegue un cambio de datos nuevo. */
 setInterval(function(){
   var scr = current();
-  if(scr && (scr.screen==="pendientes" || scr.screen==="admin-pendientes")) render();
+  if(scr && (scr.screen==="pendientes" || scr.screen==="admin-pendientes" || scr.screen==="cocina")) render();
 }, 5*1000);
 
 /* ============================== PUENTE (pantalla de estado) ==============================
@@ -1432,12 +1456,15 @@ function timestampToMs(v){
   return 0;
 }
 
-function pendientesAgrupados(){
+function pendientesAgrupados(soloMozo){
   var items = [];
   var mesasConPendientes = {};
   var now = Date.now();
   S.pedidos.forEach(function(p){
     if(p.estado==="archivado") return;
+    /* soloMozo: en la pantalla principal cada mozo ve SOLO sus platos; el panel de
+       administrador lo llama sin argumento y ve los de todos. */
+    if(soloMozo!==undefined && String(p.mozoCode||"")!==String(soloMozo||"")) return;
     var mesa = getMesa(p.mesaId);
     if(!mesa) return;
     var ambiente = getAmbiente(mesa.ambienteId);
@@ -1485,11 +1512,19 @@ function cocinaAgrupados(){
     var mesa = getMesa(p.mesaId);
     if(!mesa) return;
     (p.items||[]).forEach(function(it){
-      if(!it.enviadoCocina || it.servido) return;
+      if(!it.enviadoCocina) return;
+      var servidoReciente = false;
+      if(it.servido){
+        /* Recién servido: se queda verde en Cocina PENDIENTE_SERVIDO_GRACIA_MS (5 s)
+           y recién ahí desaparece. */
+        var ts = timestampToMs(it.servidoEn);
+        if(!ts || (Date.now()-ts) > PENDIENTE_SERVIDO_GRACIA_MS) return;
+        servidoReciente = true;
+      }
       items.push({
         mesaId: mesa.id, mesaNumero: mesa.numero, itemId: it.id, nombre: it.nombre,
         presentacion: it.presentacion, cantidad: it.cantidad, detalle: it.detalle,
-        listo: !!it.listoCocina
+        listo: !!it.listoCocina || servidoReciente, servidoReciente: servidoReciente
       });
     });
   });
@@ -1499,7 +1534,7 @@ function cocinaAgrupados(){
     return (a.nombre||"").localeCompare(b.nombre||"");
   });
   var porPreparar = 0, listos = 0;
-  items.forEach(function(it){ if(it.listo) listos += it.cantidad||0; else porPreparar += it.cantidad||0; });
+  items.forEach(function(it){ if(it.servidoReciente) return; if(it.listo) listos += it.cantidad||0; else porPreparar += it.cantidad||0; });
   return {items:items, porPreparar:porPreparar, listos:listos};
 }
 
@@ -1788,6 +1823,13 @@ function renderShell(opts){
 /* ============================== RENDER: HOME ============================== */
 
 var PLAN_SCALE = 0.95;
+/* Etiqueta "Mozo 444" bajo el número de una mesa ocupada: todos ven qué mesas están
+   ocupadas y de qué mozo, aunque no vean sus platos. */
+function etiquetaMozoMesa(mesaId){
+  var p = activePedidoForMesa(mesaId);
+  if(!p || !p.mozoCode) return "";
+  return '<div class="mozotag">'+escapeHtml(p.mozoCode)+'</div>';
+}
 function renderMesasPlano(ambiente, mesas){
   var planW = ambiente.planW || 100, planH = ambiente.planH || 40;
   var conPos = mesas.filter(function(m){ return typeof m.posX==="number" && typeof m.posY==="number"; });
@@ -1807,7 +1849,7 @@ function renderMesasPlano(ambiente, mesas){
       var w = planW*k, h = planH*k;
       html += '<div class="plantile '+est+'" data-action="'+(S.organize?"noop":"open-mesa")+'" data-id="'+m.id+'" '+
         'style="left:'+left+'px;top:'+top+'px;width:'+w+'px;height:'+h+'px;">'+
-        '<div class="num">'+escapeHtml(m.numero)+'</div></div>';
+        '<div class="num">'+escapeHtml(m.numero)+'</div>'+etiquetaMozoMesa(m.id)+'</div>';
     });
     html += '</div></div>';
     html += '<div class="planlegend">'+
@@ -1823,7 +1865,7 @@ function renderMesasPlano(ambiente, mesas){
       var dotColor = est==="libre"?"var(--success)":est==="cerrado"?"var(--warning)":est==="atendida"?"var(--teal)":"var(--accent)";
       html += '<div class="tile '+est+'" data-action="'+(S.organize?"noop":"open-mesa")+'" data-id="'+m.id+'">'+
         '<span class="status-dot" style="background:'+dotColor+'"></span>'+
-        '<div class="num">'+escapeHtml(m.numero)+'</div></div>';
+        '<div class="num">'+escapeHtml(m.numero)+'</div>'+etiquetaMozoMesa(m.id)+'</div>';
     });
     html += '</div>';
   }
@@ -1895,10 +1937,10 @@ function renderHome(){
     }
   }
 
-  var pendData = pendientesAgrupados();
+  var pendData = pendientesAgrupados(S.mozoCode);
   var cocData = cocinaAgrupados();
   var actions = '<button class="iconbtn" data-action="toggle-tema" title="'+(S.tema==="dark"?"Modo día":"Modo noche")+'">'+(S.tema==="dark"?"&#9728;":"&#127769;")+'</button>'+
-    '<button class="iconbtn" data-action="go-pendientes" title="Platos pendientes de todas las mesas">&#128221;'+(pendData.totalPlatos>0?'<span class="count">'+pendData.totalPlatos+'</span>':'')+'</button>'+
+    '<button class="iconbtn" data-action="go-pendientes" title="Mis platos pendientes">&#128221;'+(pendData.totalPlatos>0?'<span class="count">'+pendData.totalPlatos+'</span>':'')+'</button>'+
     '<button class="iconbtn" data-action="go-cocina" title="Cocina: platos por preparar">&#127859;'+(cocData.porPreparar>0?'<span class="count">'+cocData.porPreparar+'</span>':'')+'</button>'+
     '<button class="iconbtn" data-action="go-carta" title="Gestionar carta">&#128214;</button>'+
     '<button class="iconbtn" data-action="go-admin" title="Panel de administrador">&#128274;</button>'+
@@ -2166,13 +2208,13 @@ function renderCocinaScreen(){
       '<div style="font-family:\'Sora\',sans-serif;font-size:26px;font-weight:800;margin-top:4px;">'+data.listos+'</div>'+
     '</div>'+
   '</div>';
-  body += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.4;">Platos registrados en cocina. Toca un plato cuando salga de la cocina: se pone en verde y se queda as&iacute; hasta que el mozo lo marque como servido; ah&iacute; reci&eacute;n desaparece. Vuelve a tocarlo para deshacer.</div>';
+  body += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.4;">Platos registrados en cocina. Toca un plato cuando salga de la cocina: se pone en verde y se queda as&iacute; hasta que el mozo lo marque como servido; ah&iacute; se queda verde 5 segundos m&aacute;s y desaparece. Vuelve a tocarlo para deshacer.</div>';
   if(data.items.length===0){
     body += '<div class="empty"><div class="icon">&#10003;</div><h3>Cocina al d&iacute;a</h3><p>No hay platos pendientes en cocina ahorita.</p></div>';
   } else {
     body += '<div class="grid">';
     data.items.forEach(function(it){
-      body += '<div class="tile pendiente'+(it.listo?" servido":"")+'" data-action="toggle-item-listo" data-mesa-id="'+it.mesaId+'" data-item-id="'+it.itemId+'">';
+      body += '<div class="tile pendiente'+(it.listo?" servido":"")+'" data-action="'+(it.servidoReciente?"noop":"toggle-item-listo")+'" data-mesa-id="'+it.mesaId+'" data-item-id="'+it.itemId+'">';
       body += '<div class="pmesa">'+escapeHtml(it.mesaNumero)+'</div>';
       body += '<div class="pdish">'+(it.cantidad>1?it.cantidad+'&times; ':'')+escapeHtml(it.nombre)+(it.presentacion==="Fuente"?" (Fuente)":"")+'</div>';
       if(it.detalle) body += '<div class="pdetalle">'+escapeHtml(it.detalle)+'</div>';
@@ -2187,7 +2229,7 @@ function renderCocinaScreen(){
 /* ============================== RENDER: PENDIENTES (todas las mesas juntas) ============================== */
 
 function renderPendientesScreen(){
-  var data = pendientesAgrupados();
+  var data = pendientesAgrupados(S.mozoCode);
   var body = "";
   body += '<div style="display:flex;gap:10px;margin-bottom:14px;">'+
     '<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;box-shadow:var(--shadow);">'+
@@ -2199,10 +2241,10 @@ function renderPendientesScreen(){
       '<div style="font-family:\'Sora\',sans-serif;font-size:26px;font-weight:800;margin-top:4px;">'+data.totalMesas+'</div>'+
     '</div>'+
   '</div>';
-  body += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.4;">Todos los platos por servir de todas las mesas, en cuadrícula. Naranja = listo en cocina, ve a recogerlo. Toca un plato para marcarlo como servido (verde).</div>';
+  body += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.4;">Tus platos por servir (solo los que tú ingresaste), en cuadrícula. Naranja = listo en cocina, ve a recogerlo. Toca un plato para marcarlo como servido (verde).</div>';
 
   if(data.items.length===0){
-    body += '<div class="empty"><div class="icon">&#10003;</div><h3>Sin pendientes</h3><p>No hay platos por servir en ninguna mesa ahorita.</p></div>';
+    body += '<div class="empty"><div class="icon">&#10003;</div><h3>Sin pendientes</h3><p>No tienes platos por servir ahorita.</p></div>';
   } else {
     body += '<div class="grid">';
     data.items.forEach(function(it){
@@ -2215,7 +2257,7 @@ function renderPendientesScreen(){
     });
     body += '</div>';
   }
-  return renderShell({back:true, title:"Pendientes", sub:"Todas las mesas juntas", body:body});
+  return renderShell({back:true, title:"Mis pendientes", sub:"Mozo "+(S.mozoCode||""), body:body});
 }
 
 /* ============================== RENDER: PANEL DE ADMINISTRADOR ============================== */
@@ -2232,28 +2274,6 @@ function renderAdminGate(){
     '<button class="btn primary block" style="max-width:280px;margin:10px auto 0;" data-action="admin-gate-save">Entrar</button>'+
     '<button class="btn ghost block" style="max-width:280px;margin:6px auto 0;" data-action="back">Cancelar</button>'+
   '</div>';
-}
-
-function renderAdminHomeScreen(){
-  var pend = pendientesAgrupados();
-  var puenteActivo = false;
-  try{ puenteActivo = localStorage.getItem(PUENTE_LOCALSTORAGE_KEY)==="1"; }catch(e){}
-  var body = '<div style="display:flex;flex-direction:column;gap:10px;">'+
-    '<button class="btn secondary block" style="justify-content:flex-start;padding-left:20px;" data-action="go-cocina">&#127859; Cocina</button>'+
-    '<button class="btn secondary block" style="justify-content:flex-start;padding-left:20px;" data-action="go-admin-pendientes">&#128221; Pendientes por mesa, con mozo'+(pend.totalMesas>0?' ('+pend.totalMesas+')':'')+'</button>'+
-    '</div>';
-  /* Interruptor del modo puente: SOLO se activa a propósito en la computadora
-     "comando" del restaurante, nunca en el celular de un mozo. Queda guardado
-     en este navegador (no viaja a otras pestañas ni celulares). */
-  body += '<div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">'+
-    '<div class="section-title">Puente a &ldquo;999&rdquo;</div>'+
-    '<p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;line-height:1.5;">El programa de la computadora del restaurante lee los pedidos solo, directo de la base de datos — esta pantalla es solo para ver cómo va. Puedes activarla en cualquier dispositivo, no hace falta que sea la misma computadora del programa.</p>'+
-    '<button class="btn '+(puenteActivo?"danger":"secondary")+' block" data-action="toggle-puente-activo">'+
-      (puenteActivo ? "Desactivar modo puente en esta pestaña" : "Activar modo puente en esta pestaña")+
-    '</button>'+
-  '</div>';
-  body += '<button class="btn ghost sm" style="margin-top:22px;" data-action="admin-logout">Cerrar panel de administrador</button>';
-  return renderShell({back:true, title:"Administrador", body:body});
 }
 
 function renderAdminPendientesScreen(){
@@ -2289,7 +2309,8 @@ function renderAdminPendientesScreen(){
     });
     body += '</div>';
   }
-  return renderShell({back:true, title:"Pendientes por mesa", sub:"Panel de administrador", body:body});
+  body += '<button class="btn ghost sm" style="margin-top:22px;" data-action="admin-logout">Cerrar panel de administrador</button>';
+  return renderShell({back:true, title:"Pendientes por mesa", sub:"Panel de administrador \u00b7 todos los mozos", body:body});
 }
 
 /* ============================== RENDER: CÓDIGO DE MOZO (pantalla de ingreso) ============================== */
@@ -2405,18 +2426,16 @@ function renderAmbienteGate(){
     '</div>';
   if(ambientes.length===0){
     body += '<div class="empty" style="max-width:340px;margin:0 auto;"><div class="icon">&#127960;</div><h3>Sin ambientes todav&iacute;a</h3>'+
-      '<p>Crea el primero para empezar.</p></div>';
+      '<p>Todav&iacute;a no se cargaron los ambientes.</p></div>';
   } else {
     body += '<div style="max-width:400px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:10px;">';
     ambientes.forEach(function(a){
       body += '<div style="display:flex;gap:8px;">'+
         '<button class="btn secondary block" style="justify-content:flex-start;padding-left:20px;" data-action="elegir-ambiente-trabajo" data-id="'+a.id+'">'+escapeHtml(a.nombre)+'</button>'+
-        '<button class="iconbtn" style="flex-shrink:0;" data-action="edit-ambiente" data-id="'+a.id+'" title="Editar">&#9998;</button>'+
         '</div>';
     });
     body += '</div>';
   }
-  body += '<button class="btn ghost block" style="max-width:400px;margin:14px auto 0;" data-action="add-ambiente">+ Nuevo ambiente</button>';
   body += '</div>';
   return body;
 }
@@ -2452,7 +2471,6 @@ function render(){
   else if(scr.screen==="cocina") html = renderCocinaScreen();
   else if(scr.screen==="pendientes") html = renderPendientesScreen();
   else if(scr.screen==="admin-gate") html = renderAdminGate();
-  else if(scr.screen==="admin-home") html = renderAdminHomeScreen();
   else if(scr.screen==="admin-pendientes") html = renderAdminPendientesScreen();
   else html = renderHome();
   app.innerHTML = html;
@@ -2769,7 +2787,7 @@ document.addEventListener("click", function(ev){
   switch(action){
     case "back": goBack(); return;
     case "puente-descartar": puenteDescartar(el.getAttribute("data-pedido"), el.getAttribute("data-tipo")); return;
-    case "toggle-puente-activo": {
+    case "toggle-puente-activo": { /* ya sin botón en el panel; queda por si se llama a mano */
       try{
         var activo = localStorage.getItem(PUENTE_LOCALSTORAGE_KEY)==="1";
         if(activo) localStorage.removeItem(PUENTE_LOCALSTORAGE_KEY);
@@ -2807,16 +2825,15 @@ document.addEventListener("click", function(ev){
     case "go-cocina": push("cocina"); return;
     case "toggle-item-listo": toggleItemListoCocina(el.getAttribute("data-mesa-id"), el.getAttribute("data-item-id")); return;
     case "go-pendientes": push("pendientes"); return;
-    case "go-admin": push(S.adminOk ? "admin-home" : "admin-gate"); return;
+    case "go-admin": push(S.adminOk ? "admin-pendientes" : "admin-gate"); return;
     case "admin-gate-save": {
       var codigoAdmin = fieldValue("f-admin-codigo").trim();
       if(codigoAdmin!=="55555"){ showToast("Código incorrecto"); return; }
       guardarAdminOk();
-      replaceTop("admin-home");
+      replaceTop("admin-pendientes");
       return;
     }
     case "admin-logout": limpiarAdminOk(); goHome(); return;
-    case "go-admin-pendientes": push("admin-pendientes"); return;
 
     case "add-ambiente": openModal("ambiente-form", {}); return;
     case "edit-ambiente": {

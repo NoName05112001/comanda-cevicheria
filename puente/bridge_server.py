@@ -440,42 +440,73 @@ def _ejecutar_pasos(pasos, variables):
             logger.warning('Paso desconocido en config.json ignorado: %r', paso)
 
 
+def _comentario_combinado(grupo):
+    """Arma el comentario de una línea que junta varias unidades del mismo plato.
+
+    - Si todas las unidades tienen el MISMO comentario (o ninguno), se deja ese.
+    - Si difieren, se detalla cuántas unidades lleva cada uno, ej. 2 ceviches
+      (uno normal y otro "sin ají"): "1 normal, 1 ik h"."""
+    cuentas = []  # [(comentario, cantidad)] en orden de aparición
+    for it in grupo:
+        com = (it.get("comentario") or "").strip()
+        try:
+            cant = int(it.get("cantidad") or 1)
+        except (TypeError, ValueError):
+            cant = 1
+        for k, par in enumerate(cuentas):
+            if par[0] == com:
+                cuentas[k] = (com, par[1] + cant)
+                break
+        else:
+            cuentas.append((com, cant))
+    if len(cuentas) == 1:
+        return cuentas[0][0]
+    return ", ".join("%d %s" % (c, com if com else "normal") for com, c in cuentas)
+
+
 def _separar_items_automatizables(items):
     """Divide los platos de un pedido en dos listas:
 
-    - automatizables: uno por cada código real DISTINTO — se escriben en
-      "999" por el campo "carta" de la forma normal.
-    - manuales: todo lo demás, con el motivo. Incluye los que no tienen
-      código real mapeado TODAVÍA, y también el caso de "mismo plato pero
-      con un comentario distinto" (ej. piden 2 Cev Mix, uno normal y otro
-      "sin ají": en la app quedan como 2 renglones con el mismo código).
-      Confirmado por el usuario (2026-10-03): en "999" eso NO se carga
-      escribiendo la carta dos veces — se escribe el plato una sola vez
-      (con su comentario) y la(s) unidad(es) extra con otro comentario se
-      suman aparte, haciendo doble clic en la columna "cantidad" de esa
-      misma fila ya cargada (abre una ventanita para indicar cuántas
-      unidades más agregar, con su propio comentario). Ese doble clic
-      todavía no se puede automatizar (hace falta mapear esa ventanita
-      con inspeccionar_ventana.py primero), así que por ahora esos
-      renglones quedan para que el mozo los sume a mano en el momento.
+    - automatizables: UNA línea por cada código real distinto. Si el mismo
+      plato viene varias veces en la tanda (ej. piden 2 Cev Mix, uno normal
+      y otro "sin ají": en la app son 2 renglones con el mismo código), se
+      JUNTAN en una sola línea con la cantidad total y un comentario
+      combinado ("1 normal, 1 ik h"). Así "999" no abre la ventanita
+      "Actualizar Cantidad de pedido detalle" que sale al repetir un código.
+    - manuales: los que no tienen código real mapeado TODAVÍA.
+
+    Los platos que se piden DESPUÉS, cuando el mismo código ya está cargado
+    en "999" de una tanda anterior, todavía requieren la ventanita (doble
+    clic en "cantidad"); eso queda pendiente de automatizar.
     """
     automatizables = []
     manuales = []
-    codigos_vistos = set()
+    grupos = {}
+    orden = []
     for it in items:
         codigo = it.get("codigo")
         if not codigo:
             manuales.append((it, "sin código real todavía"))
             continue
-        if codigo in codigos_vistos:
-            manuales.append((
-                it,
-                "mismo plato ya cargado arriba con otro comentario/cantidad — "
-                'sumar a mano en "999" con doble clic en "cantidad" de esa fila'
-            ))
+        if codigo not in grupos:
+            grupos[codigo] = []
+            orden.append(codigo)
+        grupos[codigo].append(it)
+    for codigo in orden:
+        grupo = grupos[codigo]
+        if len(grupo) == 1:
+            automatizables.append(grupo[0])
             continue
-        codigos_vistos.add(codigo)
-        automatizables.append(it)
+        junto = dict(grupo[0])
+        total = 0
+        for it in grupo:
+            try:
+                total += int(it.get("cantidad") or 1)
+            except (TypeError, ValueError):
+                total += 1
+        junto["cantidad"] = total
+        junto["comentario"] = _comentario_combinado(grupo)
+        automatizables.append(junto)
     return automatizables, manuales
 
 
