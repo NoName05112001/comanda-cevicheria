@@ -910,7 +910,7 @@ setInterval(function(){ purgeHistorialViejo(); purgeMesasLiberadas(); }, 60*1000
    los PENDIENTE_SERVIDO_GRACIA_MS, sin esperar a que llegue un cambio de datos nuevo. */
 setInterval(function(){
   var scr = current();
-  if(!(scr && (scr.screen==="pendientes" || scr.screen==="cocina"))) return;
+  if(!(scr && (scr.screen==="pendientes" || scr.screen==="pendientes-todos" || scr.screen==="cocina"))) return;
   /* Cada 1 s (antes 5 s, y el plato podía tardar hasta ~10 s en irse): solo se
      vuelve a dibujar si hay algún plato servido dentro de su ventana de gracia. */
   var now = Date.now(), hay = false;
@@ -1940,9 +1940,11 @@ function renderHome(){
   }
 
   var pendData = pendientesAgrupados(S.mozoCode);
+  var todosData = pendientesAgrupados();
   var cocData = cocinaAgrupados();
   var actions = '<button class="iconbtn" data-action="toggle-tema" title="'+(S.tema==="dark"?"Modo día":"Modo noche")+'">'+(S.tema==="dark"?"&#9728;":"&#127769;")+'</button>'+
     '<button class="iconbtn" data-action="go-pendientes" title="Mis platos pendientes">&#128221;'+(pendData.totalPlatos>0?'<span class="count">'+pendData.totalPlatos+'</span>':'')+'</button>'+
+    '<button class="iconbtn" data-action="go-pendientes-todos" title="Todas las mesas: pendientes de todos los mozos">&#127869;'+(todosData.totalPlatos>0?'<span class="count">'+todosData.totalPlatos+'</span>':'')+'</button>'+
     '<button class="iconbtn" data-action="go-cocina" title="Cocina: platos por preparar">&#127859;'+(cocData.porPreparar>0?'<span class="count">'+cocData.porPreparar+'</span>':'')+'</button>'+
     '<button class="iconbtn" data-action="go-carta" title="Gestionar carta">&#128214;</button>'+
     '<button class="pillbtn'+(S.organize?" on":"")+'" data-action="toggle-organize">'+(S.organize?"Listo":"Organizar")+'</button>';
@@ -2229,8 +2231,10 @@ function renderCocinaScreen(){
 
 /* ============================== RENDER: PENDIENTES (todas las mesas juntas) ============================== */
 
-function renderPendientesScreen(){
-  var data = pendientesAgrupados(S.mozoCode);
+/* todos=true: vista "Todas las mesas" (platos pendientes de TODOS los mozos, con mozo y mesa);
+   sin argumento: "Mis pendientes" (solo los del mozo actual). */
+function renderPendientesScreen(todos){
+  var data = todos ? pendientesAgrupados() : pendientesAgrupados(S.mozoCode);
   var body = "";
   body += '<div style="display:flex;gap:10px;margin-bottom:14px;">'+
     '<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;box-shadow:var(--shadow);">'+
@@ -2242,10 +2246,10 @@ function renderPendientesScreen(){
       '<div style="font-family:\'Sora\',sans-serif;font-size:26px;font-weight:800;margin-top:4px;">'+data.totalMesas+'</div>'+
     '</div>'+
   '</div>';
-  body += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.4;">Tus platos por servir (solo los que tú ingresaste), en cuadrícula. Naranja = listo en cocina, ve a recogerlo. Toca un plato para marcarlo como servido (verde).</div>';
+  body += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.4;">'+(todos?'Platos por servir de todas las mesas, con el mozo de cada una. ':'Tus platos por servir (solo los que tú ingresaste), en cuadrícula. ')+'Naranja = listo en cocina, ve a recogerlo. Toca un plato para marcarlo como servido (verde).</div>';
 
   if(data.items.length===0){
-    body += '<div class="empty"><div class="icon">&#10003;</div><h3>Sin pendientes</h3><p>No tienes platos por servir ahorita.</p></div>';
+    body += '<div class="empty"><div class="icon">&#10003;</div><h3>Sin pendientes</h3><p>'+(todos?'No hay platos por servir en ninguna mesa ahorita.':'No tienes platos por servir ahorita.')+'</p></div>';
   } else {
     body += '<div class="grid">';
     data.items.forEach(function(it){
@@ -2253,11 +2257,13 @@ function renderPendientesScreen(){
       body += '<div class="pmesa">'+escapeHtml(it.mesaNumero)+'</div>';
       body += '<div class="pdish">'+(it.cantidad>1?it.cantidad+'&times; ':'')+escapeHtml(it.nombre)+(it.presentacion==="Fuente"?" (Fuente)":"")+'</div>';
       if(it.detalle) body += '<div class="pdetalle">'+escapeHtml(it.detalle)+'</div>';
+      if(todos && it.mozoCode) body += '<div class="pdetalle" style="color:var(--teal);font-weight:700;">Mozo '+escapeHtml(it.mozoCode)+'</div>';
       body += '<span class="pdone" title="'+(it.servidoReciente?"Tocar para deshacer":(it.listoCocina?"Listo en cocina \u2014 tocar al entregarlo":"Marcar servido"))+'">&#10003;</span>';
       body += '</div>';
     });
     body += '</div>';
   }
+  if(todos) return renderShell({back:true, title:"Todas las mesas", sub:"Pendientes de todos los mozos", body:body});
   return renderShell({back:true, title:"Mis pendientes", sub:"Mozo "+(S.mozoCode||""), body:body});
 }
 
@@ -2418,6 +2424,7 @@ function render(){
   else if(scr.screen==="carta") html = renderCartaAdmin();
   else if(scr.screen==="cocina") html = renderCocinaScreen();
   else if(scr.screen==="pendientes") html = renderPendientesScreen();
+  else if(scr.screen==="pendientes-todos") html = renderPendientesScreen(true);
   else html = renderHome();
   app.innerHTML = html;
   if(focusInfo){
@@ -2771,6 +2778,7 @@ document.addEventListener("click", function(ev){
     case "go-cocina": push("cocina"); return;
     case "toggle-item-listo": toggleItemListoCocina(el.getAttribute("data-mesa-id"), el.getAttribute("data-item-id")); return;
     case "go-pendientes": push("pendientes"); return;
+    case "go-pendientes-todos": push("pendientes-todos"); return;
     case "add-ambiente": openModal("ambiente-form", {}); return;
     case "edit-ambiente": {
       var a = getAmbiente(el.getAttribute("data-id"));
