@@ -720,6 +720,21 @@ class PuenteFirestore(object):
         self.ambientes_por_id = {}
         self.log = []  # [{texto, ok, hora}], más reciente primero
         self.enviando = False
+        # UN SOLO hilo permanente para todo lo que toca "999" (UIA/COM). Antes se
+        # creaba un hilo nuevo por cada pedido: al terminar, ese hilo cerraba su
+        # COM y sus objetos quedaban "huérfanos"; el recolector de basura los
+        # liberaba después desde OTRO hilo y eso tumbaba el programa con
+        # "access violation" (comtypes/pywinauto). Con un hilo único y vivo todo
+        # el tiempo, los objetos COM se crean y se liberan en el mismo hilo.
+        # El recolector de basura automático puede correr en CUALQUIER hilo (ej. los
+        # de red de Firestore) y liberar desde ahí objetos COM creados por el hilo de
+        # 999 -> access violation. Se apaga el automático y se recoge a mano, solo
+        # desde el hilo de 999, al terminar cada tanda de pedidos.
+        import gc
+        gc.disable()
+        self._despertar = threading.Event()
+        self._hilo_999 = threading.Thread(target=self._bucle_hilo_999, name="hilo-999", daemon=True)
+        self._hilo_999.start()
         self._cargar_codigos_reales()
         self._cargar_mesas()
         self._cargar_ambientes()
@@ -875,7 +890,7 @@ class PuenteFirestore(object):
             self.cola.sort(key=lambda e: e["ts"])
 
         if nuevos_eventos:
-            threading.Thread(target=self.procesar_cola, daemon=True).start()
+            self.lanzar_procesar_cola()
 
     def _on_comandos(self, docs, changes, read_time):
         for d in docs:
@@ -908,6 +923,24 @@ class PuenteFirestore(object):
         self.log.insert(0, {"texto": texto, "ok": ok, "hora": hora})
         if len(self.log) > 25:
             self.log = self.log[:25]
+
+    def lanzar_procesar_cola(self):
+        """Avisa al hilo permanente que revise la cola (no crea hilos nuevos)."""
+        self._despertar.set()
+
+    def _bucle_hilo_999(self):
+        while True:
+            self._despertar.wait()
+            self._despertar.clear()
+            try:
+                self.procesar_cola()
+            except Exception:
+                logger.exception("Error inesperado en el hilo de 999 (sigue funcionando)")
+            try:
+                import gc
+                gc.collect()
+            except Exception:
+                pass
 
     def procesar_cola(self):
         """Manda los eventos pendientes de a UNO por vez, en orden, esperando
@@ -1032,7 +1065,7 @@ def main():
                 puente.escribir_estado()
                 # Por si algún evento quedó pendiente de un intento fallido.
                 if puente.cola and not puente.enviando:
-                    threading.Thread(target=puente.procesar_cola, daemon=True).start()
+                    puente.lanzar_procesar_cola()
             except Exception:
                 logger.exception("Error en el ciclo principal (el puente sigue funcionando)")
     except KeyboardInterrupt:
