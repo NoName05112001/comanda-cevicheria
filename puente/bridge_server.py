@@ -158,6 +158,20 @@ CONFIG_DEFAULT = {
         {"accion": "esperar", "ms": 200},
         {"accion": "tecla", "tecla": "{ENTER}"}
     ],
+    # Confirmado por el usuario (2026-10-12): después de "Finalizar" se activan
+    # los botones "Activar" e "Imprimir". Se presiona "Imprimir" (se manda a caja)
+    # y luego Enter, Enter, Enter para que salga la DOBLE impresión.
+    # "clic_boton" hace clic en el botón de "999" por su identificador interno
+    # (auto_id) — btnImprimir — esperando hasta que esté activo.
+    "secuencia_imprimir": [
+        {"accion": "clic_boton", "auto_id": "btnImprimir"},
+        {"accion": "esperar", "ms": 700},
+        {"accion": "tecla", "tecla": "{ENTER}"},
+        {"accion": "esperar", "ms": 600},
+        {"accion": "tecla", "tecla": "{ENTER}"},
+        {"accion": "esperar", "ms": 600},
+        {"accion": "tecla", "tecla": "{ENTER}"}
+    ],
     "secuencia_finalizar": [
         {"accion": "tecla", "tecla": "%f"},
         {"accion": "esperar", "ms": 400},
@@ -490,6 +504,45 @@ def _visibles_con_texto(ventana, titulo, reintentos=4, espera_ms=400):
     return visibles
 
 
+def _visibles_en_panel(ventana, auto_id_panel, titulo, reintentos=4, espera_ms=400):
+    """Controles visibles con texto 'titulo' que estén DENTRO del panel de "999"
+    cuyo identificador interno es 'auto_id_panel' (según la inspección real de
+    la ventana: "pnZonas" = los rótulos de ambiente, "pnMesas" = las mesas).
+    Quita duplicados (el mismo control puede aparecer envuelto más de una vez)."""
+    import time as _time
+    unicos = []
+    for _ in range(reintentos):
+        unicos = []
+        vistos = set()
+        try:
+            paneles = ventana.descendants(auto_id=auto_id_panel)
+        except Exception:
+            paneles = []
+        for pn in paneles:
+            try:
+                if not pn.is_visible():
+                    continue
+                encontrados = pn.descendants(title=titulo)
+            except Exception:
+                continue
+            for c in encontrados:
+                try:
+                    if not c.is_visible():
+                        continue
+                    r = c.rectangle()
+                    clave = (r.left, r.top, r.right, r.bottom)
+                except Exception:
+                    continue
+                if clave in vistos:
+                    continue
+                vistos.add(clave)
+                unicos.append(c)
+        if unicos:
+            return unicos
+        _time.sleep(espera_ms / 1000.0)
+    return unicos
+
+
 def _encontrar_visible(ventana, titulo, reintentos=6, espera_ms=400):
     """Busca, dentro de 'ventana', TODOS los controles cuyo texto sea
     exactamente 'titulo' y exige que haya exactamente UNO visible en
@@ -532,6 +585,27 @@ def _navegar_a_mesa(cfg, ambiente_999, mesa_numero):
     aparece, exactamente una vez, la mesa buscada. Así nunca hace clic en una
     mesa equivocada."""
     ventana = _conectar_uia(cfg)
+
+    # Camino principal (según la inspección real de "999"): el ambiente es un
+    # rótulo dentro del panel "pnZonas" y la mesa un rótulo dentro de "pnMesas".
+    # Buscar SOLO ahí evita confundirlo con los otros textos "PRIVADO"/"MEZANINE"
+    # que aparecen en la pantalla de una mesa abierta (título y cabecera).
+    zonas = _visibles_en_panel(ventana, "pnZonas", ambiente_999)
+    if len(zonas) == 1:
+        zonas[0].click_input()
+        time.sleep(0.6)
+        mesas = _visibles_en_panel(ventana, "pnMesas", mesa_numero)
+        if len(mesas) == 1:
+            mesas[0].click_input()
+            time.sleep(0.6)
+            return ventana
+        raise RuntimeError(
+            'Se hizo clic en el ambiente "%s" pero la mesa %s apareció %d vez/veces en el panel de mesas '
+            '(se esperaba exactamente 1). No se hizo clic en ninguna mesa.' % (ambiente_999, mesa_numero, len(mesas))
+        )
+    logger.warning('Panel de ambientes: "%s" apareció %d vez/veces (se esperaba 1). Se usa el método de respaldo.',
+                   ambiente_999, len(zonas))
+
     candidatos = _visibles_con_texto(ventana, ambiente_999)
     if not candidatos:
         raise RuntimeError('No se encontró el ambiente "%s" en "999" (¿está en la pantalla de mesas?).' % ambiente_999)
@@ -566,11 +640,50 @@ def _navegar_a_mesa(cfg, ambiente_999, mesa_numero):
     )
 
 
-def _ejecutar_pasos(pasos, variables):
+def _clic_boton_999(cfg, auto_id, espera_max_s=10):
+    """Hace clic en un botón de "999" identificado por su auto_id interno (ej.
+    "btnImprimir"). Espera hasta espera_max_s a que esté visible y ACTIVO, y exige
+    que sea uno solo (quita duplicados por posición)."""
+    ventana = _conectar_uia(cfg)
+    limite = time.time() + espera_max_s
+    ultimo = "no apareció"
+    while True:
+        unicos, vistos = [], set()
+        try:
+            for c in ventana.descendants(auto_id=auto_id):
+                try:
+                    if not c.is_visible():
+                        continue
+                    if not c.is_enabled():
+                        ultimo = "existe pero está desactivado"
+                        continue
+                    r = c.rectangle()
+                    clave = (r.left, r.top, r.right, r.bottom)
+                except Exception:
+                    continue
+                if clave in vistos:
+                    continue
+                vistos.add(clave)
+                unicos.append(c)
+        except Exception as e:
+            ultimo = str(e)
+        if len(unicos) == 1:
+            unicos[0].click_input()
+            return
+        if len(unicos) > 1:
+            ultimo = "%d botones activos con ese nombre" % len(unicos)
+        if time.time() >= limite:
+            raise RuntimeError('No se pudo hacer clic en el botón "%s" de "999" (%s). No se hizo clic.' % (auto_id, ultimo))
+        time.sleep(0.4)
+
+
+def _ejecutar_pasos(pasos, variables, cfg=None):
     from pywinauto.keyboard import send_keys
     for paso in pasos:
         accion = paso.get("accion")
-        if accion == "escribir":
+        if accion == "clic_boton":
+            _clic_boton_999(cfg or CONFIG, paso.get("auto_id", ""))
+        elif accion == "escribir":
             texto = paso.get("texto", "").format(**variables)
             send_keys(_escapar_para_send_keys(texto), pause=0.02, with_spaces=True)
         elif accion == "tecla":
@@ -751,6 +864,21 @@ def finalizar_en_999(cfg, datos, escribir=True):
     _clic_para_enfocar_999(cfg)
 
 
+def imprimir_en_999(cfg, datos, escribir=True):
+    """Manda a imprimir la cuenta en caja (doble impresión). La mesa ya debe estar
+    finalizada ("Imprimir" activo); el puente entra a la mesa y ejecuta
+    secuencia_imprimir."""
+    _navegar_si_corresponde(cfg, datos)
+    if not escribir:
+        return
+    ventana = _activar_ventana_999(cfg)
+    _ejecutar_pasos(cfg.get("secuencia_imprimir") or [], {
+        "mozoCode": datos.get("mozoCode", ""), "mesaNumero": datos.get("mesaNumero", ""),
+        "carta": "", "cantidad": "", "comentario": ""
+    }, cfg)
+    ventana.set_focus()
+
+
 def simular(tipo, datos):
     logger.info("=" * 60)
     if tipo == "registrar":
@@ -766,9 +894,12 @@ def simular(tipo, datos):
                         it.get("cantidad"), it.get("nombreApp"),
                         (" — " + it["comentario"]) if it.get("comentario") else "", motivo)
         logger.info('   -> Presionaría "Registrar" con código de mozo "%s"', datos.get("mozoCode"))
+    elif tipo == "imprimir":
+        logger.info('[SIMULACIÓN] Presionaría "Imprimir" en "999" (doble impresión en caja) — Mesa %s.',
+                     datos.get("mesaNumero"))
     else:
-        logger.info('[SIMULACIÓN] Finalizaría (pasaría a cobrar) — Mesa %s (mozo %s). '
-                     'Imprimiría 2 veces.', datos.get("mesaNumero"), datos.get("mozoCode"))
+        logger.info('[SIMULACIÓN] Finalizaría (pasaría a cobrar) — Mesa %s (mozo %s).',
+                     datos.get("mesaNumero"), datos.get("mozoCode"))
     logger.info("=" * 60)
 
 
@@ -966,6 +1097,31 @@ class PuenteFirestore(object):
                         self.cola.append(evento)
                         nuevos_eventos.append(evento)
 
+                # "Imprimir" apretado en la cuenta de la app: cada vez que sube el contador
+                # "imprimirContador" del pedido hay una impresión nueva por mandar.
+                try:
+                    n_imp = int(pedido.get("imprimirContador") or 0)
+                except (TypeError, ValueError):
+                    n_imp = 0
+                if n_imp > 0:
+                    clave_imp = "imprimir_%s_%d" % (pedido_id, n_imp)
+                    if clave_imp not in self.procesados and not any(e["key"] == clave_imp for e in self.cola):
+                        evento = {
+                            "key": clave_imp,
+                            "tipo": "imprimir",
+                            "pedidoId": pedido_id,
+                            "ts": self._ts_valor(pedido.get("imprimirSolicitadoEn")),
+                            "payload": {
+                                "mesaNumero": mesa_numero,
+                                "ambiente999": ambiente999,
+                                "mozoCode": pedido.get("mozoCode") or "",
+                                "pedidoId": pedido_id
+                            },
+                            "marcar_ids": [clave_imp]
+                        }
+                        self.cola.append(evento)
+                        nuevos_eventos.append(evento)
+
             # Orden real: por la hora de servidor en que se mandó cada evento,
             # así entran en el orden real aunque Firestore los avise en otro
             # orden por timing de red entre dispositivos distintos.
@@ -1057,6 +1213,8 @@ class PuenteFirestore(object):
                         try:
                             if evento["tipo"] == "registrar":
                                 registrar_en_999(self.cfg, evento["payload"], escribir=escribir)
+                            elif evento["tipo"] == "imprimir":
+                                imprimir_en_999(self.cfg, evento["payload"], escribir=escribir)
                             else:
                                 finalizar_en_999(self.cfg, evento["payload"], escribir=escribir)
                             if escribir:
@@ -1072,7 +1230,8 @@ class PuenteFirestore(object):
                             _ocultar_overlay()
                     modo_txt = " (modo simulación, no tocó \"999\")" if modo == "simulacion" else ""
                     self._log_push(
-                        (("Platos registrados" if evento["tipo"] == "registrar" else "Pedido finalizado") +
+                        (("Platos registrados" if evento["tipo"] == "registrar" else
+                          "Cuenta enviada a imprimir" if evento["tipo"] == "imprimir" else "Pedido finalizado") +
                          " — Mesa " + str(evento["payload"]["mesaNumero"]) + modo_txt), True
                     )
                     with self.lock:
