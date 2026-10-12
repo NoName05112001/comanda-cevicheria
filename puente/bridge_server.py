@@ -94,6 +94,9 @@ CONFIG_DEFAULT = {
     # superior de la ventana cae el clic (la barra de título). Poner
     # "clic_final_en_999": false para desactivarlo.
     "clic_final_en_999": True,
+    # Pasos para que "999" vuelva a la pantalla de ambientes/mesas después de
+    # registrar o finalizar (ej. [{"accion":"tecla","tecla":"{ESC}"}]). Vacío = no hace nada.
+    "secuencia_volver": [],
     "clic_final_y": 12,
     "ventana": {
         "proceso": "Restaurante",
@@ -231,7 +234,10 @@ except Exception:
     pass
 try:
     import faulthandler
-    _fault_file = open(LOG_PATH, "a", encoding="utf-8")
+    # Va a su PROPIO archivo: Windows reporta a veces errores COM recuperables
+    # (ej. código 0x8001010d, "999" ocupada) con un volcado largo aunque el
+    # programa siga bien; así no ensucian puente_log.txt.
+    _fault_file = open(os.path.join(BASE_DIR, "puente_caidas.txt"), "a", encoding="utf-8")
     faulthandler.enable(file=_fault_file, all_threads=True)
 except Exception:
     pass
@@ -450,6 +456,40 @@ def _conectar_uia(cfg):
     return ventana
 
 
+def _describir_control(c):
+    try:
+        ei = c.element_info
+        r = c.rectangle()
+        return "%s/%s en (%d,%d,%d,%d)" % (getattr(ei, "control_type", "?"),
+                                          getattr(ei, "class_name", "?"),
+                                          r.left, r.top, r.right, r.bottom)
+    except Exception:
+        return "?"
+
+
+def _visibles_con_texto(ventana, titulo, reintentos=4, espera_ms=400):
+    """Todos los controles visibles cuyo texto es exactamente 'titulo' (puede ser
+    más de uno). Reintenta un poco si todavía no aparece ninguno."""
+    import time as _time
+    visibles = []
+    for _ in range(reintentos):
+        try:
+            candidatos = ventana.descendants(title=titulo)
+        except Exception:
+            candidatos = []
+        visibles = []
+        for c in candidatos:
+            try:
+                if c.is_visible():
+                    visibles.append(c)
+            except Exception:
+                continue
+        if visibles:
+            return visibles
+        _time.sleep(espera_ms / 1000.0)
+    return visibles
+
+
 def _encontrar_visible(ventana, titulo, reintentos=6, espera_ms=400):
     """Busca, dentro de 'ventana', TODOS los controles cuyo texto sea
     exactamente 'titulo' y exige que haya exactamente UNO visible en
@@ -483,18 +523,47 @@ def _encontrar_visible(ventana, titulo, reintentos=6, espera_ms=400):
 
 def _navegar_a_mesa(cfg, ambiente_999, mesa_numero):
     """Hace los clics reales de ambiente -> mesa en "999". Devuelve la
-    ventana (conexión UIA) ya posicionada en la pantalla de esa mesa, por
-    si hace falta para seguir buscando controles ahí (ej. en el futuro,
-    para el doble clic en "cantidad" del plato repetido con otro
-    comentario)."""
+    ventana (conexión UIA) ya posicionada en la pantalla de esa mesa.
+
+    Si el texto del ambiente aparece en VARIOS controles visibles a la vez (por
+    ejemplo el botón del ambiente y además rótulos con el mismo nombre cuando
+    "999" se quedó dentro de la pantalla de una mesa), ya no se rinde: prueba
+    cada uno (botones primero) y SOLO da por bueno el clic si después de hacerlo
+    aparece, exactamente una vez, la mesa buscada. Así nunca hace clic en una
+    mesa equivocada."""
     ventana = _conectar_uia(cfg)
-    ambiente_ctrl = _encontrar_visible(ventana, ambiente_999)
-    ambiente_ctrl.click_input()
-    time.sleep(0.6)
-    mesa_ctrl = _encontrar_visible(ventana, mesa_numero)
-    mesa_ctrl.click_input()
-    time.sleep(0.6)
-    return ventana
+    candidatos = _visibles_con_texto(ventana, ambiente_999)
+    if not candidatos:
+        raise RuntimeError('No se encontró el ambiente "%s" en "999" (¿está en la pantalla de mesas?).' % ambiente_999)
+
+    def orden(c):
+        try:
+            tipo = getattr(c.element_info, "control_type", "")
+            r = c.rectangle()
+            return (0 if tipo in ("Button", "TabItem", "ListItem") else 1, r.top, r.left)
+        except Exception:
+            return (2, 0, 0)
+    candidatos.sort(key=orden)
+    if len(candidatos) > 1:
+        logger.warning('"%s" aparece %d veces en pantalla: %s. Se prueba uno por uno, verificando que aparezca la mesa %s.',
+                       ambiente_999, len(candidatos), " | ".join(_describir_control(c) for c in candidatos), mesa_numero)
+
+    ultimo_error = None
+    for c in candidatos:
+        try:
+            c.click_input()
+            time.sleep(0.6)
+            mesa_ctrl = _encontrar_visible(ventana, mesa_numero, reintentos=3, espera_ms=300)
+            mesa_ctrl.click_input()
+            time.sleep(0.6)
+            return ventana
+        except Exception as e:
+            ultimo_error = e
+            continue
+    raise RuntimeError(
+        'No se pudo llegar a la mesa %s desde "%s" (%d candidato(s) probados). Último motivo: %s'
+        % (mesa_numero, ambiente_999, len(candidatos), ultimo_error)
+    )
 
 
 def _ejecutar_pasos(pasos, variables):
@@ -616,6 +685,17 @@ def _navegar_si_corresponde(cfg, datos):
     _navegar_a_mesa(cfg, ambiente999, mesa_numero)
 
 
+def _volver_a_pantalla_mesas(cfg):
+    pasos = cfg.get("secuencia_volver") or []
+    if not pasos:
+        return
+    try:
+        time.sleep(0.4)
+        _ejecutar_pasos(pasos, {"carta": "", "cantidad": "", "comentario": "", "mozoCode": "", "mesaNumero": ""})
+    except Exception as e:
+        logger.warning('No se pudo volver a la pantalla de mesas: %s', e)
+
+
 def _clic_para_enfocar_999(cfg):
     """Un clic en la barra de título de "999" al terminar un pedido, para que
     quede en primer plano y lista para el siguiente. Nunca hace fallar el pedido."""
@@ -652,6 +732,7 @@ def registrar_en_999(cfg, datos, escribir=True):
         "mozoCode": datos.get("mozoCode", ""), "mesaNumero": datos.get("mesaNumero", ""),
         "carta": "", "cantidad": "", "comentario": ""
     })
+    _volver_a_pantalla_mesas(cfg)
     ventana.set_focus()
     _clic_para_enfocar_999(cfg)
 
@@ -665,6 +746,7 @@ def finalizar_en_999(cfg, datos, escribir=True):
         "mozoCode": datos.get("mozoCode", ""), "mesaNumero": datos.get("mesaNumero", ""),
         "carta": "", "cantidad": "", "comentario": ""
     })
+    _volver_a_pantalla_mesas(cfg)
     ventana.set_focus()
     _clic_para_enfocar_999(cfg)
 
