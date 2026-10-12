@@ -88,6 +88,13 @@ CONFIG_DEFAULT = {
     # como siempre en modo simulación). Recién con modo:"real" además
     # escribe de verdad.
     "navegar_con_clics": False,
+    # Después de registrar/finalizar, hace UN clic en la barra de título de
+    # "999" para dejarla activa en primer plano (por si el foco quedó en otra
+    # ventana o en un aviso). "clic_final_y" = cuántos píxeles abajo del borde
+    # superior de la ventana cae el clic (la barra de título). Poner
+    # "clic_final_en_999": false para desactivarlo.
+    "clic_final_en_999": True,
+    "clic_final_y": 12,
     "ventana": {
         "proceso": "Restaurante",
         "titulo_contiene": "REALIZAR PEDIDOS POR MESAS"
@@ -392,14 +399,50 @@ def _conectar_uia(cfg):
             'No se encontró ningún proceso llamado "%s" corriendo en esta '
             'computadora. ¿"999" está abierto?' % proceso
         )
+    # Reintenta unos segundos: justo después de "Registrar", "999" puede estar
+    # ocupado un momento y no contestarle a UIA (la lista de ventanas sale vacía).
     candidatos = []
-    for pid in pids:
-        candidatos.extend(find_elements(backend="uia", process=pid))
+    for intento in range(6):
+        candidatos = []
+        for pid in pids:
+            try:
+                candidatos.extend(find_elements(backend="uia", process=pid))
+            except Exception as e:
+                logger.warning("find_elements(uia) falló para pid %s: %s", pid, e)
+        if candidatos:
+            break
+        time.sleep(1.0)
+
     if not candidatos:
+        # Plan B: buscar las ventanas por Win32 (no depende de que UIA responda) y
+        # dejar en el log QUÉ ventanas tiene "999" ahora mismo, para diagnosticar.
+        titulo_contiene = cfg["ventana"].get("titulo_contiene", "")
+        hwnd_principal = None
+        descripcion = []
+        for pid in pids:
+            try:
+                for e in find_elements(backend="win32", process=pid, visible_only=False):
+                    descripcion.append("%r clase=%s visible=%s" % (
+                        e.name, getattr(e, "class_name", "?"), getattr(e, "visible", "?")))
+                    if titulo_contiene and titulo_contiene.lower() in (e.name or "").lower():
+                        hwnd_principal = e.handle
+            except Exception as ex:
+                descripcion.append("(win32 falló: %s)" % ex)
+        logger.warning('UIA no ve ventanas de "%s". Ventanas Win32 del proceso: %s',
+                       proceso, "; ".join(descripcion) if descripcion else "ninguna")
+        if hwnd_principal:
+            try:
+                app = Application(backend="uia").connect(handle=hwnd_principal)
+                ventana = app.window(handle=hwnd_principal)
+                ventana.set_focus()
+                logger.info("Conectado a la ventana principal de 999 por Win32 (plan B).")
+                return ventana
+            except Exception as ex:
+                logger.warning("Plan B (conectar por handle) falló: %s", ex)
         raise RuntimeError(
             'El proceso "%s" está corriendo, pero no se le encontró ninguna '
             'ventana por UIA (necesaria para los clics). ¿"999" está '
-            'abierto y no minimizado?' % proceso
+            'abierto y no minimizado? (¿quedó alguna ventana/aviso abierto?)' % proceso
         )
     app = Application(backend="uia").connect(process=candidatos[0].process_id)
     ventana = app.top_window()
@@ -573,6 +616,21 @@ def _navegar_si_corresponde(cfg, datos):
     _navegar_a_mesa(cfg, ambiente999, mesa_numero)
 
 
+def _clic_para_enfocar_999(cfg):
+    """Un clic en la barra de título de "999" al terminar un pedido, para que
+    quede en primer plano y lista para el siguiente. Nunca hace fallar el pedido."""
+    if not cfg.get("clic_final_en_999", True):
+        return
+    try:
+        time.sleep(0.5)
+        ventana = _conectar_uia(cfg)
+        ancho = ventana.rectangle().width()
+        ventana.click_input(coords=(int(ancho // 2), int(cfg.get("clic_final_y", 12))))
+        time.sleep(0.3)
+    except Exception as e:
+        logger.warning('No se pudo hacer el clic final para enfocar "999": %s', e)
+
+
 def registrar_en_999(cfg, datos, escribir=True):
     automatizables, manuales = _separar_items_automatizables(datos["items"])
     _avisar_items_manuales(datos["mesaNumero"], manuales)
@@ -595,6 +653,7 @@ def registrar_en_999(cfg, datos, escribir=True):
         "carta": "", "cantidad": "", "comentario": ""
     })
     ventana.set_focus()
+    _clic_para_enfocar_999(cfg)
 
 
 def finalizar_en_999(cfg, datos, escribir=True):
@@ -607,6 +666,7 @@ def finalizar_en_999(cfg, datos, escribir=True):
         "carta": "", "cantidad": "", "comentario": ""
     })
     ventana.set_focus()
+    _clic_para_enfocar_999(cfg)
 
 
 def simular(tipo, datos):
