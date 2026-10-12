@@ -204,6 +204,35 @@ _file.setFormatter(_fmt)
 logger.addHandler(_file)
 
 # ---------------------------------------------------------------------------
+# Diagnóstico de cierres inesperados: todo lo que mate al programa (error de
+# Python en cualquier hilo, o una caída "dura" de una librería como pywinauto/
+# grpc) queda escrito en puente_log.txt. Si el log termina SIN ninguna de estas
+# líneas, a la ventana la cerraron desde fuera (Windows, alguien, suspensión).
+# ---------------------------------------------------------------------------
+
+def _excepthook(tipo, valor, tb):
+    logger.critical("ERROR NO CONTROLADO (hilo principal)", exc_info=(tipo, valor, tb))
+
+def _thread_excepthook(args):
+    logger.critical("ERROR NO CONTROLADO en hilo %s", getattr(args.thread, "name", "?"),
+                    exc_info=(args.exc_type, args.exc_value, args.exc_traceback))
+
+sys.excepthook = _excepthook
+try:
+    threading.excepthook = _thread_excepthook
+except Exception:
+    pass
+try:
+    import faulthandler
+    _fault_file = open(LOG_PATH, "a", encoding="utf-8")
+    faulthandler.enable(file=_fault_file, all_threads=True)
+except Exception:
+    pass
+
+import atexit
+atexit.register(lambda: logger.info("El puente se está cerrando (salida normal del programa)."))
+
+# ---------------------------------------------------------------------------
 # Procesados (persistido en disco — qué ya se le avisó a "999", para no
 # repetirlo si este programa se reinicia)
 # ---------------------------------------------------------------------------
@@ -938,13 +967,24 @@ def main():
     try:
         while True:
             time.sleep(5)
-            puente.escribir_estado()
-            # Por si algún evento quedó pendiente de un intento fallido.
-            if puente.cola and not puente.enviando:
-                threading.Thread(target=puente.procesar_cola, daemon=True).start()
+            # Un error aquí NO debe tumbar al puente: se anota y sigue.
+            try:
+                puente.escribir_estado()
+                # Por si algún evento quedó pendiente de un intento fallido.
+                if puente.cola and not puente.enviando:
+                    threading.Thread(target=puente.procesar_cola, daemon=True).start()
+            except Exception:
+                logger.exception("Error en el ciclo principal (el puente sigue funcionando)")
     except KeyboardInterrupt:
-        pass
+        logger.info("Puente detenido con Ctrl+C.")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except BaseException:
+        logger.critical("El puente terminó por un error fatal:", exc_info=True)
+        try:
+            input("\nEl puente se detuvo por un error (ver puente_log.txt). Presiona Enter para cerrar...")
+        except Exception:
+            pass
